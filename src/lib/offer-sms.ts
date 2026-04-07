@@ -47,9 +47,8 @@ export function buildOfferSmsText(opts: {
   });
 }
 
-export function buildOfferSmsCommentText(opts: {
+export function buildOfferDetailsCommentText(opts: {
   workOrderId: string;
-  smsText: string;
   expiresAt: Date;
   templates: OfferTemplateSnapshot[];
   totalAmount?: number | null;
@@ -67,9 +66,6 @@ export function buildOfferSmsCommentText(opts: {
     }),
     '',
     `Total: ${totalAmount} kr.`,
-    `Udløber: ${opts.expiresAt.toLocaleString('da-DK')}`,
-    '',
-    'SMS sendt til kunde:',
-    opts.smsText,
+    `Udløber: ${opts.expiresAt.toLocaleString('da-DK')}`
   ].join('\n');
 }

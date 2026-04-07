@@ -177,9 +177,9 @@ export async function sendSms(data: {
   });
 }
 
-export async function createTicketSmsComment(data: {
+export async function createTicketComment(data: {
   ticketId: number;
-  smsLogId: number;
+  smsLogId?: number;
   userId: number;
   comment?: string;
   autocomment?: string;
@@ -188,11 +188,11 @@ export async function createTicketSmsComment(data: {
     method: 'POST',
     body: JSON.stringify({
       content: {
-        autocomment: data.autocomment ?? 'sms_other',
+        autocomment: data.autocomment ?? 'other',
         comment: data.comment ?? '',
         userid: data.userId,
         taskid: data.ticketId,
-        smslogid: data.smsLogId,
+        ...(data.smsLogId && { smslogid: data.smsLogId }),
       },
     }),
   });

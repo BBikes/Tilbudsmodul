@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { validateMechanicSession } from '@/lib/session';
-import { sendSms, createTicketSmsComment, getTicket, updateTicketTags } from '@/lib/bikedesk';
+import { sendSms, createTicketComment, getTicket, updateTicketTags } from '@/lib/bikedesk';
 import { getBikedeskApiUserId } from '@/lib/bikedesk-config';
 import { buildOfferSlug, resolvePublicAppUrl } from '@/lib/offer-link';
-import { buildOfferSmsCommentText, buildOfferSmsText } from '@/lib/offer-sms';
+import { buildOfferDetailsCommentText, buildOfferSmsText } from '@/lib/offer-sms';
 import type { OfferSettings, OfferTemplateSnapshot } from '@/types';
 import { DEFAULT_OFFER_SETTINGS } from '@/types';
 
@@ -114,23 +114,31 @@ export async function POST(req: Request) {
     // Don't fail the offer creation — log the error but continue
   }
 
-  // Log SMS as BikeDesk comment
+  // Log SMS and Details as BikeDesk comments
   if (smsBatchId && commentUserId) {
     try {
-      const commentBody = buildOfferSmsCommentText({
+      // 1. Log the SMS text
+      await createTicketComment({
+        ticketId: body.ticketId,
+        smsLogId: smsBatchId,
+        userId: commentUserId,
+        comment: `SMS sendt til kunde:\n${smsText}`,
+        autocomment: 'sms_other',
+      });
+
+      // 2. Log the offer details separately
+      const detailsBody = buildOfferDetailsCommentText({
         workOrderId: body.workOrderId,
-        smsText,
         expiresAt,
         templates: body.templates,
         totalAmount,
       });
 
-      await createTicketSmsComment({
+      await createTicketComment({
         ticketId: body.ticketId,
-        smsLogId: smsBatchId,
         userId: commentUserId,
-        comment: commentBody,
-        autocomment: 'sms_other',
+        comment: detailsBody,
+        autocomment: 'other',
       });
     } catch (err) {
       console.error('[offer/send] Comment failed', err);

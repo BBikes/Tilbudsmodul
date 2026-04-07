@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
-import { createTicketSmsComment, sendSms } from '@/lib/bikedesk';
+import { createTicketComment, sendSms, findTicketByWorkOrderNumber } from '@/lib/bikedesk';
 import { getBikedeskApiUserId } from '@/lib/bikedesk-config';
 import { buildOfferSlug, resolvePublicAppUrl } from '@/lib/offer-link';
-import { buildOfferSmsCommentText, buildOfferSmsText } from '@/lib/offer-sms';
+import { buildOfferDetailsCommentText, buildOfferSmsText } from '@/lib/offer-sms';
 import type { OfferSettings } from '@/types';
 import { DEFAULT_OFFER_SETTINGS } from '@/types';
 
@@ -97,22 +97,37 @@ export async function POST(
 
       if (smsResult.batchid) {
         if (commentUserId) {
-          const commentBody = buildOfferSmsCommentText({
-            workOrderId: original.work_order_id,
-            smsText,
-            expiresAt,
-            templates: original.templates_snapshot,
-            totalAmount: original.total_amount,
-            isResend: true,
-          });
+          try {
+            const ticket = await findTicketByWorkOrderNumber(original.work_order_id);
+            if (ticket) {
+              // 1. Raw SMS Comment
+              await createTicketComment({
+                ticketId: ticket.id,
+                smsLogId: smsResult.batchid,
+                userId: commentUserId,
+                comment: `SMS sendt til kunde:\n${smsText}`,
+                autocomment: 'sms_other',
+              });
 
-          await createTicketSmsComment({
-            ticketId: parseInt(original.work_order_id, 10),
-            smsLogId: smsResult.batchid,
-            userId: commentUserId,
-            comment: commentBody,
-            autocomment: 'sms_other',
-          });
+              // 2. Offer Details Comment
+              const detailsBody = buildOfferDetailsCommentText({
+                workOrderId: original.work_order_id,
+                expiresAt,
+                templates: original.templates_snapshot,
+                totalAmount: original.total_amount,
+                isResend: true,
+              });
+
+              await createTicketComment({
+                ticketId: ticket.id,
+                userId: commentUserId,
+                comment: detailsBody,
+                autocomment: 'other',
+              });
+            }
+          } catch (commentErr) {
+            console.error('[resend] Failed to create comment', commentErr);
+          }
         }
 
         await supabase
