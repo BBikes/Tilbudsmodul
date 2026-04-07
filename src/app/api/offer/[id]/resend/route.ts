@@ -40,7 +40,7 @@ export async function POST(
 
   const sentAt = new Date();
   const expiresAt = new Date(sentAt.getTime() + settings.expiry_hours * 60 * 60 * 1000);
-  const appUrl = resolvePublicAppUrl(_req);
+  const appUrl = resolvePublicAppUrl();
   const publicSlug = buildOfferSlug(original.work_order_id, sentAt);
   let commentUserId: number | null = null;
 

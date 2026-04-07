@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -25,10 +26,13 @@ export default function AdminNav() {
     <nav className="bg-white border-b border-gray-100 px-4">
       <div className="max-w-6xl mx-auto flex items-center justify-between h-14">
         <div className="flex items-center gap-1">
-          <img
+          <Image
             src="https://b-bikes.dk/wp-content/uploads/Logo-Wide.svg"
             alt="B-Bikes"
-            className="h-7 mr-4"
+            width={160}
+            height={28}
+            unoptimized
+            className="h-7 w-auto mr-4"
           />
           {links.map((l) => (
             <Link

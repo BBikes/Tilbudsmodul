@@ -1,5 +1,7 @@
 import type { Offer } from '@/types';
 
+const DEFAULT_PUBLIC_APP_URL = 'https://tilbudsmodul-indol.vercel.app';
+
 function pad(value: number) {
   return String(value).padStart(2, '0');
 }
@@ -50,12 +52,10 @@ export function buildOfferPath(identifier: string) {
   return `/tilbud/${encodeURIComponent(identifier)}`;
 }
 
-export function resolvePublicAppUrl(req?: Request) {
+export function resolvePublicAppUrl() {
   const configured =
     process.env.NEXT_PUBLIC_APP_URL ||
     process.env.APP_URL ||
-    process.env.VERCEL_PROJECT_PRODUCTION_URL ||
-    process.env.VERCEL_URL ||
     '';
 
   if (configured) {
@@ -63,19 +63,5 @@ export function resolvePublicAppUrl(req?: Request) {
     return normalized.replace(/\/$/, '');
   }
 
-  if (req) {
-    const forwardedProto = req.headers.get('x-forwarded-proto');
-    const forwardedHost = req.headers.get('x-forwarded-host') || req.headers.get('host');
-    if (forwardedHost) {
-      return `${forwardedProto ?? 'https'}://${forwardedHost}`.replace(/\/$/, '');
-    }
-
-    try {
-      return new URL(req.url).origin.replace(/\/$/, '');
-    } catch {
-      // Fall back below.
-    }
-  }
-
-  return 'http://localhost:3003';
+  return DEFAULT_PUBLIC_APP_URL;
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -31,10 +32,13 @@ export default function AdminLoginPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-sm p-8">
-        <img
+        <Image
           src="https://b-bikes.dk/wp-content/uploads/Logo-Wide.svg"
           alt="B-Bikes"
-          className="h-8 mb-2"
+          width={183}
+          height={32}
+          unoptimized
+          className="h-8 w-auto mb-2"
         />
         <p className="text-xs text-gray-400 mb-7">Admin login — Tilbudsmodul</p>
 

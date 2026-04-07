@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Search, LogOut } from 'lucide-react';
@@ -48,10 +49,13 @@ export default function WorkOrderEntryClient({ mechanicName }: { mechanicName: s
       {/* Top bar */}
       <header className="bg-white border-b border-gray-100 px-4">
         <div className="max-w-xl mx-auto flex items-center justify-between h-14">
-          <img
+          <Image
             src="https://b-bikes.dk/wp-content/uploads/Logo-Wide.svg"
             alt="B-Bikes"
-            className="h-7"
+            width={160}
+            height={28}
+            unoptimized
+            className="h-7 w-auto"
           />
           <div className="flex items-center gap-3">
             {mechanicName && (

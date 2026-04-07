@@ -54,7 +54,7 @@ export async function POST(req: Request) {
   const totalAmount = body.templates.reduce((sum, t) => sum + (t.price ?? 0), 0);
   const sentAt = new Date();
   const expiresAt = new Date(sentAt.getTime() + settings.expiry_hours * 60 * 60 * 1000);
-  const appUrl = resolvePublicAppUrl(req);
+  const appUrl = resolvePublicAppUrl();
   const publicSlug = buildOfferSlug(body.workOrderId, sentAt);
   let commentUserId: number | null = null;
 

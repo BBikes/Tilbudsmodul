@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState, useMemo } from 'react';
 import type { Offer, OfferMarker, OfferTemplateSnapshot } from '@/types';
 import { MarkerBadge } from '@/components/offer/MarkerBadge';
@@ -142,10 +143,13 @@ function OfferView({ offer }: { offer: Offer }) {
       {/* Header */}
       <header className="bg-white border-b border-gray-100 px-4">
         <div className="max-w-lg mx-auto flex items-center h-14">
-          <img
+          <Image
             src="https://b-bikes.dk/wp-content/uploads/Logo-Wide.svg"
             alt="B-Bikes"
-            className="h-7"
+            width={160}
+            height={28}
+            unoptimized
+            className="h-7 w-auto"
           />
         </div>
       </header>
@@ -280,10 +284,13 @@ function ExpiredPage({ phone, email }: { phone: string; email: string }) {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <header className="bg-white border-b border-gray-100 px-4">
         <div className="max-w-lg mx-auto flex items-center h-14">
-          <img
+          <Image
             src="https://b-bikes.dk/wp-content/uploads/Logo-Wide.svg"
             alt="B-Bikes"
-            className="h-7"
+            width={160}
+            height={28}
+            unoptimized
+            className="h-7 w-auto"
           />
         </div>
       </header>

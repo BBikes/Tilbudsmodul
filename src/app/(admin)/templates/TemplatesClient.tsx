@@ -89,7 +89,7 @@ export default function TemplatesClient({
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
         {templates.length === 0 ? (
           <div className="py-12 text-center text-gray-400 text-sm">
-            Ingen skabeloner endnu. Klik "Synkroniser" for at hente fra BikeDesk.
+            Ingen skabeloner endnu. Klik &quot;Synkroniser&quot; for at hente fra BikeDesk.
           </div>
         ) : (
           <div className="overflow-x-auto">

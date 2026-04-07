@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type {
@@ -218,10 +219,13 @@ function Header() {
   return (
     <header className="bg-white border-b border-gray-100 px-4">
       <div className="max-w-6xl mx-auto flex items-center h-14">
-        <img
+        <Image
           src="https://b-bikes.dk/wp-content/uploads/Logo-Wide.svg"
           alt="B-Bikes"
-          className="h-7"
+          width={160}
+          height={28}
+          unoptimized
+          className="h-7 w-auto"
         />
       </div>
     </header>

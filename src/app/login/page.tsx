@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
@@ -47,10 +48,13 @@ export default function MechanicLoginPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="w-full max-w-xs bg-white rounded-2xl shadow-sm p-8">
-        <img
+        <Image
           src="https://b-bikes.dk/wp-content/uploads/Logo-Wide.svg"
           alt="B-Bikes"
-          className="h-8 mb-8"
+          width={183}
+          height={32}
+          unoptimized
+          className="h-8 w-auto mb-8"
         />
 
         <p className="text-sm font-medium text-gray-700 mb-1">Mekaniker login</p>
