@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { validateMechanicSession } from '@/lib/session';
-import { findTicketByWorkOrderNumber, getCustomer } from '@/lib/bikedesk';
+import { findTicketByWorkOrderNumber, getCustomer, getTicketTemplateGroups } from '@/lib/bikedesk';
 import { createServiceClient } from '@/lib/supabase/server';
 import type { OfferSettings, OfferTemplate } from '@/types';
 import { DEFAULT_OFFER_SETTINGS } from '@/types';
@@ -41,9 +41,22 @@ export default async function SendPage({ searchParams }: Props) {
     .from('offer_templates')
     .select('*')
     .eq('active', true)
+    .order('group_name', { ascending: true })
+    .order('position', { ascending: true })
     .order('title', { ascending: true });
 
-  if (settings.template_group_id) {
+  if (settings.template_ticket_type) {
+    try {
+      const groups = await getTicketTemplateGroups();
+      const groupIds = groups
+        .filter((group) => group.tickettype === settings.template_ticket_type)
+        .map((group) => group.id);
+
+      templatesQuery = templatesQuery.in('group_id', groupIds.length > 0 ? groupIds : [-1]);
+    } catch {
+      templatesQuery = templatesQuery.in('group_id', [-1]);
+    }
+  } else if (settings.template_group_id) {
     templatesQuery = templatesQuery.eq('group_id', settings.template_group_id);
   }
 

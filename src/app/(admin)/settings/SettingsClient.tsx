@@ -1,15 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type { OfferSettings } from '@/types';
-import { Loader2 } from 'lucide-react';
+import { Check, ChevronDown, Loader2, Search, X } from 'lucide-react';
 
 interface Props {
   settings: OfferSettings;
   availableTags: { id: number; label: string }[];
+  availableTemplateTypes: { value: string; label: string }[];
 }
 
-export default function SettingsClient({ settings: initial, availableTags }: Props) {
+export default function SettingsClient({
+  settings: initial,
+  availableTags,
+  availableTemplateTypes,
+}: Props) {
   const [s, setS] = useState(initial);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -84,17 +89,30 @@ export default function SettingsClient({ settings: initial, availableTags }: Pro
           </Field>
         </Section>
 
+        <Section title="SMS">
+          <Field label="SMS-skabelon til kunden">
+            <textarea
+              value={s.sms_template}
+              onChange={(e) => update({ sms_template: e.target.value })}
+              placeholder={defaultSmsTemplatePlaceholder}
+              rows={8}
+              className={`${inputCls} min-h-44 resize-y`}
+            />
+          </Field>
+          <p className="text-xs text-gray-400">
+            Tilgængelige felter: {'{customerName}'}, {'{workOrderId}'}, {'{offerLink}'} og {'{expiry}'}.
+          </p>
+        </Section>
+
         {/* Template group */}
         <Section title="Skabeloner">
-          <Field label="BikeDesk gruppe-ID (lad tom for at vise alle)">
-            <input
-              type="number"
-              value={s.template_group_id ?? ''}
-              onChange={(e) =>
-                update({ template_group_id: e.target.value ? parseInt(e.target.value) : null })
-              }
-              className={inputCls}
-              placeholder="f.eks. 42"
+          <Field label="Hovedgruppe der må vises for mekanikeren">
+            <SearchableSingleSelect
+              options={availableTemplateTypes}
+              value={s.template_ticket_type}
+              onChange={(value) => update({ template_ticket_type: value, template_group_id: null })}
+              placeholder="Vælg hovedgruppe"
+              emptyText="Ingen hovedgrupper fundet"
             />
           </Field>
         </Section>
@@ -175,35 +193,206 @@ function TagsField({
   onChange: (v: number[]) => void;
   available: { id: number; label: string }[];
 }) {
-  const toggle = (id: number) => {
-    if (value.includes(id)) {
-      onChange(value.filter((v) => v !== id));
-    } else {
-      onChange([...value, id]);
-    }
-  };
-
   return (
     <div>
       <p className="text-xs font-medium text-gray-600 mb-2">{label}</p>
       {available.length === 0 ? (
         <p className="text-xs text-gray-400">Ingen tags tilgængelige</p>
       ) : (
-        <div className="flex flex-wrap gap-2">
-          {available.map((tag) => (
+        <SearchableMultiSelect
+          options={available.map((tag) => ({ value: String(tag.id), label: tag.label }))}
+          values={value.map(String)}
+          onChange={(values) => onChange(values.map((item) => parseInt(item, 10)).filter(Number.isFinite))}
+          placeholder="Vælg tags"
+          emptyText="Ingen tags matcher søgningen"
+        />
+      )}
+    </div>
+  );
+}
+
+function SearchableSingleSelect({
+  options,
+  value,
+  onChange,
+  placeholder,
+  emptyText,
+}: {
+  options: { value: string; label: string }[];
+  value: string | null;
+  onChange: (value: string | null) => void;
+  placeholder: string;
+  emptyText: string;
+}) {
+  const searchId = useId();
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const filtered = options.filter((option) => option.label.toLowerCase().includes(query.trim().toLowerCase()));
+  const selected = options.find((option) => option.value === value) ?? null;
+
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm flex items-center justify-between text-left focus:outline-none focus:ring-2 focus:ring-gray-900"
+      >
+        <span className={selected ? 'text-gray-900' : 'text-gray-400'}>
+          {selected?.label ?? placeholder}
+        </span>
+        <ChevronDown size={16} className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="border border-gray-200 rounded-2xl bg-white p-3 space-y-3">
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              id={searchId}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Søg..."
+              className="w-full border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            />
+          </div>
+
+          <div className="space-y-1 max-h-56 overflow-y-auto">
             <button
-              key={tag.id}
               type="button"
-              onClick={() => toggle(tag.id)}
-              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-                value.includes(tag.id)
-                  ? 'bg-gray-900 text-white border-gray-900'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+              onClick={() => {
+                onChange(null);
+                setOpen(false);
+                setQuery('');
+              }}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
+                value === null ? 'bg-gray-900 text-white' : 'hover:bg-gray-50 text-gray-700'
               }`}
             >
-              {tag.label}
+              <span>Vis alle hovedgrupper</span>
+              {value === null && <Check size={15} />}
+            </button>
+
+            {filtered.length === 0 ? (
+              <p className="px-3 py-2 text-sm text-gray-400">{emptyText}</p>
+            ) : (
+              filtered.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(option.value);
+                    setOpen(false);
+                    setQuery('');
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
+                    value === option.value ? 'bg-gray-900 text-white' : 'hover:bg-gray-50 text-gray-700'
+                  }`}
+                >
+                  <span>{option.label}</span>
+                  {value === option.value && <Check size={15} />}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SearchableMultiSelect({
+  options,
+  values,
+  onChange,
+  placeholder,
+  emptyText,
+}: {
+  options: { value: string; label: string }[];
+  values: string[];
+  onChange: (values: string[]) => void;
+  placeholder: string;
+  emptyText: string;
+}) {
+  const searchId = useId();
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const filtered = options.filter((option) => option.label.toLowerCase().includes(query.trim().toLowerCase()));
+  const selectedLabels = options.filter((option) => values.includes(option.value));
+
+  const toggle = (optionValue: string) => {
+    if (values.includes(optionValue)) {
+      onChange(values.filter((value) => value !== optionValue));
+    } else {
+      onChange([...values, optionValue]);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm flex items-center justify-between text-left focus:outline-none focus:ring-2 focus:ring-gray-900"
+      >
+        <span className={selectedLabels.length > 0 ? 'text-gray-900' : 'text-gray-400'}>
+          {selectedLabels.length > 0 ? `${selectedLabels.length} valgt` : placeholder}
+        </span>
+        <ChevronDown size={16} className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {selectedLabels.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {selectedLabels.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => toggle(option.value)}
+              className="inline-flex items-center gap-1 rounded-full bg-gray-100 text-gray-700 px-3 py-1 text-xs font-medium hover:bg-gray-200"
+            >
+              <span>{option.label}</span>
+              <X size={12} />
             </button>
           ))}
+        </div>
+      )}
+
+      {open && (
+        <div className="border border-gray-200 rounded-2xl bg-white p-3 space-y-3">
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              id={searchId}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Søg..."
+              className="w-full border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            />
+          </div>
+
+          <div className="space-y-1 max-h-64 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <p className="px-3 py-2 text-sm text-gray-400">{emptyText}</p>
+            ) : (
+              filtered.map((option) => {
+                const checked = values.includes(option.value);
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => toggle(option.value)}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
+                      checked ? 'bg-gray-900 text-white' : 'hover:bg-gray-50 text-gray-700'
+                    }`}
+                  >
+                    <span>{option.label}</span>
+                    {checked && <Check size={15} />}
+                  </button>
+                );
+              })
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -212,3 +401,16 @@ function TagsField({
 
 const inputCls =
   'w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900';
+
+const defaultSmsTemplatePlaceholder = [
+  'Hej {customerName},',
+  '',
+  'Vi har lavet et tilbud til dig på din cykel (sag {workOrderId}).',
+  '',
+  'Se og godkend tilbuddet her:',
+  '{offerLink}',
+  '',
+  'Tilbuddet udløber {expiry}.',
+  '',
+  'Mvh B-Bikes',
+].join('\n');

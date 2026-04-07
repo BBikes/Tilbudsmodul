@@ -85,6 +85,7 @@ export async function POST(req: Request) {
     expiresAt,
     appUrl,
     token: offer.token,
+    smsTemplate: settings.sms_template,
   });
 
   let smsBatchId: number | undefined;

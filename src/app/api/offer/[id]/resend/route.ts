@@ -73,6 +73,7 @@ export async function POST(
         expiresAt,
         appUrl,
         token: newOffer.token,
+        smsTemplate: settings.sms_template,
       });
 
       const smsResult = await sendSms({

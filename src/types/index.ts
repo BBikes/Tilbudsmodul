@@ -85,6 +85,8 @@ export interface OfferSettings {
   expired_phone: string;
   expired_email: string;
   template_group_id: number | null;
+  template_ticket_type: string | null;
+  sms_template: string;
   tags_on_sent: number[];
   tags_on_accepted: number[];
   tags_on_rejected: number[];
@@ -97,6 +99,8 @@ export const DEFAULT_OFFER_SETTINGS: OfferSettings = {
   expired_phone: '',
   expired_email: '',
   template_group_id: null,
+  template_ticket_type: null,
+  sms_template: '',
   tags_on_sent: [],
   tags_on_accepted: [],
   tags_on_rejected: [],

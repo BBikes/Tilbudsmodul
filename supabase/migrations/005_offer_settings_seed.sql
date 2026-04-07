@@ -8,6 +8,8 @@ insert into system_settings (key, value) values (
     "expired_phone": "",
     "expired_email": "",
     "template_group_id": null,
+    "template_ticket_type": null,
+    "sms_template": "",
     "tags_on_sent": [],
     "tags_on_accepted": [],
     "tags_on_rejected": [],

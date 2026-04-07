@@ -4,26 +4,42 @@ export function buildOfferSmsText(opts: {
   expiresAt: Date;
   appUrl: string;
   token: string;
+  smsTemplate?: string;
 }): string {
-  const expiry = opts.expiresAt.toLocaleDateString('da-DK', {
+  const expiry = opts.expiresAt.toLocaleString('da-DK', {
     day: 'numeric',
     month: 'long',
     hour: '2-digit',
     minute: '2-digit',
   });
 
-  const link = `${opts.appUrl.replace(/\/$/, '')}/tilbud/${opts.token}`;
+  const offerLink = `${opts.appUrl.replace(/\/$/, '')}/tilbud/${opts.token}`;
 
-  return [
-    `Hej ${opts.customerName},`,
-    ``,
-    `Vi har lavet et tilbud til dig på din cykel (sag ${opts.workOrderId}).`,
-    ``,
-    `Se og godkend tilbuddet her:`,
-    link,
-    ``,
-    `Tilbuddet udløber ${expiry}.`,
-    ``,
-    `Mvh B-Bikes`,
+  const template = opts.smsTemplate?.trim() || [
+    'Hej {customerName},',
+    '',
+    'Vi har lavet et tilbud til dig på din cykel (sag {workOrderId}).',
+    '',
+    'Se og godkend tilbuddet her:',
+    '{offerLink}',
+    '',
+    'Tilbuddet udløber {expiry}.',
+    '',
+    'Mvh B-Bikes',
   ].join('\n');
+
+  const replacements: Record<string, string> = {
+    customerName: opts.customerName,
+    customer_name: opts.customerName,
+    workOrderId: opts.workOrderId,
+    work_order_id: opts.workOrderId,
+    offerLink,
+    link: offerLink,
+    expiry,
+    expiresAt: expiry,
+  };
+
+  return template.replace(/\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}/g, (match, key: string) => {
+    return replacements[key] ?? match;
+  });
 }
