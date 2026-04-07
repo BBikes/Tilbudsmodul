@@ -123,29 +123,13 @@ export async function POST(
               console.warn('[resend] Could not resolve smsLogId from batch', err);
             }
 
-            // 1. Raw SMS Comment
+            // Only link the SMS log entry — BikeDesk renders the SMS natively
             await createTicketComment({
               ticketId: ticket.id,
               smsLogId: smsLogId ?? smsResult.batchid,
               userId: commentUserId,
-              comment: `SMS sendt til kunde:\n${smsText}`,
+              comment: '',
               autocomment: 'sms_other',
-            });
-
-            // 2. Offer Details Comment
-            const detailsBody = buildOfferDetailsCommentText({
-              workOrderId: original.work_order_id,
-              expiresAt,
-              templates: original.templates_snapshot,
-              totalAmount: original.total_amount,
-              isResend: true,
-            });
-
-            await createTicketComment({
-              ticketId: ticket.id,
-              userId: commentUserId,
-              comment: detailsBody,
-              autocomment: 'other',
             });
           } catch (commentErr) {
             console.error('[resend] Failed to create comment', commentErr);

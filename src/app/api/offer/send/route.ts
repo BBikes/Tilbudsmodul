@@ -129,10 +129,10 @@ export async function POST(req: Request) {
     // Don't fail the offer creation — log the error but continue
   }
 
-  // Log SMS and Details as BikeDesk comments
+  // Log SMS as BikeDesk comment — only smslogid needed, no extra comment text
   if (smsBatchId && commentUserId) {
     try {
-      // Wait briefly for BikeDesk to process the batch (same as Booking project)
+      // Wait briefly for BikeDesk to process the batch
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // Resolve the individual SMS log entry id from the batch
@@ -144,28 +144,12 @@ export async function POST(req: Request) {
         console.warn('[offer/send] Could not resolve smsLogId from batch', err);
       }
 
-      // 1. Log the SMS text, linked to the SMS log entry
       await createTicketComment({
         ticketId: body.ticketId,
         smsLogId: smsLogId ?? smsBatchId,
         userId: commentUserId,
-        comment: `SMS sendt til kunde:\n${smsText}`,
+        comment: '',
         autocomment: 'sms_other',
-      });
-
-      // 2. Log the offer details separately
-      const detailsBody = buildOfferDetailsCommentText({
-        workOrderId: body.workOrderId,
-        expiresAt,
-        templates: body.templates,
-        totalAmount,
-      });
-
-      await createTicketComment({
-        ticketId: body.ticketId,
-        userId: commentUserId,
-        comment: detailsBody,
-        autocomment: 'other',
       });
     } catch (err) {
       console.error('[offer/send] Comment failed', err);
