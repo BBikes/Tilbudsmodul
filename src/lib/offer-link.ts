@@ -2,6 +2,29 @@ import type { Offer } from '@/types';
 
 const DEFAULT_PUBLIC_APP_URL = 'https://tilbudsmodul-indol.vercel.app';
 
+function normalizePublicAppUrl(value: string) {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  const normalized = trimmed.startsWith('http') ? trimmed : `https://${trimmed}`;
+
+  try {
+    const url = new URL(normalized);
+    const hostname = url.hostname.toLowerCase();
+
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0') {
+      return null;
+    }
+
+    return url.origin.replace(/\/$/, '');
+  } catch {
+    return null;
+  }
+}
+
 function pad(value: number) {
   return String(value).padStart(2, '0');
 }
@@ -53,14 +76,12 @@ export function buildOfferPath(identifier: string) {
 }
 
 export function resolvePublicAppUrl() {
-  const configured =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.APP_URL ||
-    '';
+  const configured = [process.env.NEXT_PUBLIC_APP_URL, process.env.APP_URL]
+    .map((value) => normalizePublicAppUrl(value ?? ''))
+    .find(Boolean);
 
   if (configured) {
-    const normalized = configured.startsWith('http') ? configured : `https://${configured}`;
-    return normalized.replace(/\/$/, '');
+    return configured;
   }
 
   return DEFAULT_PUBLIC_APP_URL;
