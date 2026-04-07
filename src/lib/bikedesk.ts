@@ -3,6 +3,7 @@ import type {
   BikedeskCustomer,
   BikedeskTicket,
   BikedeskTicketTemplate,
+  BikedeskTicketTemplateMaterial,
   BikedeskTicketTemplateGroup,
   BikedeskUser,
 } from '@/types';
@@ -128,6 +129,12 @@ export async function attachTemplateToTicket(ticketId: number, templateId: numbe
 
 export async function getTicketTemplates(): Promise<BikedeskTicketTemplate[]> {
   return bdFetch<BikedeskTicketTemplate[]>('/ticket-templates');
+}
+
+export async function getTicketTemplateMaterials(
+  templateId: number
+): Promise<BikedeskTicketTemplateMaterial[]> {
+  return bdFetch<BikedeskTicketTemplateMaterial[]>(`/ticket-templates/${templateId}/materials`);
 }
 
 export async function getTicketTemplateGroups(): Promise<BikedeskTicketTemplateGroup[]> {

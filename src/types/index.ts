@@ -159,6 +159,15 @@ export interface BikedeskTicketTemplateGroup {
   visible: boolean;
 }
 
+export interface BikedeskTicketTemplateMaterial {
+  id: number;
+  templateid?: number;
+  amount: number;
+  price: number;
+  derivedprice?: number | null;
+  amountpaid?: number;
+}
+
 export interface BikedeskUser {
   id: number;
   name?: string;
