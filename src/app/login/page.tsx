@@ -72,7 +72,7 @@ export default function MechanicLoginPage() {
             pattern="[0-9]*"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            placeholder="•••••"
+            placeholder="0000"
             maxLength={10}
             required
             className="w-full border border-gray-200 rounded-xl px-4 py-4 text-2xl tracking-[0.5em] text-center focus:outline-none focus:ring-2 focus:ring-gray-900 mb-4"
