@@ -43,11 +43,23 @@ export async function POST(
   const appUrl = resolvePublicAppUrl();
   const publicSlug = buildOfferSlug(original.work_order_id, sentAt);
   let commentUserId: number | null = null;
+  let ticket: import('@/types').BikedeskTicket | null = null;
 
   try {
-    commentUserId = getBikedeskApiUserId();
+    ticket = await findTicketByWorkOrderNumber(original.work_order_id);
+    if (ticket?.assignee) {
+      commentUserId = ticket.assignee;
+    }
   } catch (err) {
-    console.error('[resend] Invalid API user id', err);
+    console.warn('[resend] getTicket failed early', err);
+  }
+
+  if (!commentUserId) {
+    try {
+      commentUserId = getBikedeskApiUserId();
+    } catch (err) {
+      console.error('[resend] Invalid API user id', err);
+    }
   }
 
   // Create new offer row (new token)
@@ -96,13 +108,11 @@ export async function POST(
       });
 
       if (smsResult.batchid) {
-        if (commentUserId) {
+        if (commentUserId && ticket) {
           try {
-            const ticket = await findTicketByWorkOrderNumber(original.work_order_id);
-            if (ticket) {
-              // 1. Raw SMS Comment
-              await createTicketComment({
-                ticketId: ticket.id,
+            // 1. Raw SMS Comment
+            await createTicketComment({
+              ticketId: ticket.id,
                 smsLogId: smsResult.batchid,
                 userId: commentUserId,
                 comment: `SMS sendt til kunde:\n${smsText}`,
@@ -124,7 +134,6 @@ export async function POST(
                 comment: detailsBody,
                 autocomment: 'other',
               });
-            }
           } catch (commentErr) {
             console.error('[resend] Failed to create comment', commentErr);
           }
