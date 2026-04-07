@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { sendSms } from '@/lib/bikedesk';
+import { buildOfferSlug, resolvePublicAppUrl } from '@/lib/offer-link';
 import { buildOfferSmsText } from '@/lib/offer-sms';
 import type { Offer, OfferSettings } from '@/types';
 import { DEFAULT_OFFER_SETTINGS } from '@/types';
@@ -36,14 +37,18 @@ export async function POST(
     ? { ...DEFAULT_OFFER_SETTINGS, ...(settingsRow.value as Partial<OfferSettings>) }
     : DEFAULT_OFFER_SETTINGS;
 
-  const expiresAt = new Date(Date.now() + settings.expiry_hours * 60 * 60 * 1000);
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3003';
+  const sentAt = new Date();
+  const expiresAt = new Date(sentAt.getTime() + settings.expiry_hours * 60 * 60 * 1000);
+  const appUrl = resolvePublicAppUrl(_req);
+  const publicSlug = buildOfferSlug(original.work_order_id, sentAt);
 
   // Create new offer row (new token)
   const { data: newOffer } = await supabase
     .from('offers')
     .insert({
+      sent_at: sentAt.toISOString(),
       work_order_id: original.work_order_id,
+      public_slug: publicSlug,
       mechanic_id: original.mechanic_id,
       mechanic_name: original.mechanic_name,
       bikedesk_customer_id: original.bikedesk_customer_id,
@@ -57,7 +62,7 @@ export async function POST(
       total_amount: original.total_amount,
       resend_of: original.id,
     })
-    .select('id, token')
+    .select('id, token, public_slug')
     .single();
 
   if (!newOffer) {
@@ -72,7 +77,7 @@ export async function POST(
         workOrderId: original.work_order_id,
         expiresAt,
         appUrl,
-        token: newOffer.token,
+        identifier: newOffer.public_slug ?? newOffer.token,
         smsTemplate: settings.sms_template,
       });
 

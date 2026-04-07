@@ -55,6 +55,7 @@ export interface OfferImageSnapshot {
 export interface Offer {
   id: string;
   token: string;
+  public_slug: string | null;
   work_order_id: string;
   mechanic_id: string | null;
   mechanic_name: string;

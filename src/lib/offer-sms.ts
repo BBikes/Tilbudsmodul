@@ -1,9 +1,11 @@
+import { buildOfferPath } from './offer-link';
+
 export function buildOfferSmsText(opts: {
   customerName: string;
   workOrderId: string;
   expiresAt: Date;
   appUrl: string;
-  token: string;
+  identifier: string;
   smsTemplate?: string;
 }): string {
   const expiry = opts.expiresAt.toLocaleString('da-DK', {
@@ -13,7 +15,7 @@ export function buildOfferSmsText(opts: {
     minute: '2-digit',
   });
 
-  const offerLink = `${opts.appUrl.replace(/\/$/, '')}/tilbud/${opts.token}`;
+  const offerLink = `${opts.appUrl.replace(/\/$/, '')}${buildOfferPath(opts.identifier)}`;
 
   const template = opts.smsTemplate?.trim() || [
     'Hej {customerName},',

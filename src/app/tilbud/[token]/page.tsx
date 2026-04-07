@@ -8,15 +8,31 @@ interface Props {
 }
 
 export default async function TilbudPage({ params }: Props) {
-  const { token } = await params;
+  const { token: identifier } = await params;
 
   const supabase = await createServiceClient();
 
-  const { data: offer } = await supabase
+  let offer = null;
+
+  const { data: offerBySlug } = await supabase
     .from('offers')
     .select('*')
-    .eq('token', token)
-    .single();
+    .eq('public_slug', identifier)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  offer = offerBySlug;
+
+  if (!offer) {
+    const { data: offerByToken } = await supabase
+      .from('offers')
+      .select('*')
+      .eq('token', identifier)
+      .maybeSingle();
+
+    offer = offerByToken;
+  }
 
   if (!offer) {
     return <NotFound />;
