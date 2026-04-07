@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
-import { getTicket, updateTicketTags, attachTemplateToTicket } from '@/lib/bikedesk';
+import { getTicket, findTicketByWorkOrderNumber, updateTicketTags, attachTemplateToTicket } from '@/lib/bikedesk';
 import type { OfferSettings, OfferTemplateSnapshot } from '@/types';
 import { DEFAULT_OFFER_SETTINGS } from '@/types';
 
@@ -78,13 +78,16 @@ export async function POST(
 
   // Apply BikeDesk changes
   try {
-    const ticket = await getTicket(parseInt(offer.work_order_id, 10));
+    const ticket = await findTicketByWorkOrderNumber(offer.work_order_id);
+    if (!ticket) {
+      throw new Error(`Ticket for work_order_id ${offer.work_order_id} not found`);
+    }
 
     if (action !== 'reject' && acceptedIds.length > 0) {
       // Attach accepted templates to ticket
       for (const templateId of acceptedIds) {
         try {
-          await attachTemplateToTicket(parseInt(offer.work_order_id, 10), templateId);
+          await attachTemplateToTicket(ticket.id, templateId);
         } catch (err) {
           console.error(`[respond] attach template ${templateId} failed`, err);
         }
@@ -93,7 +96,7 @@ export async function POST(
       // Update tags: accepted
       if (settings.tags_on_accepted.length > 0 || settings.tags_remove_on_accepted.length > 0) {
         await updateTicketTags(
-          parseInt(offer.work_order_id, 10),
+          ticket.id,
           ticket,
           settings.tags_on_accepted,
           settings.tags_remove_on_accepted
@@ -103,7 +106,7 @@ export async function POST(
       // Update tags: rejected
       if (settings.tags_on_rejected.length > 0 || settings.tags_remove_on_rejected.length > 0) {
         await updateTicketTags(
-          parseInt(offer.work_order_id, 10),
+          ticket.id,
           ticket,
           settings.tags_on_rejected,
           settings.tags_remove_on_rejected

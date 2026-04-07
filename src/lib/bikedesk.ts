@@ -103,13 +103,7 @@ export async function updateTicketTags(
     method: 'PUT',
     body: JSON.stringify({
       content: {
-        id: ticket.id,
-        customerid: ticket.customerid,
-        description: ticket.description,
-        type: ticket.type,
-        status: ticket.status,
-        startTime: ticket.startTime,
-        pickup: ticket.pickup,
+        ...ticket,
         tagids: next,
       },
     }),
