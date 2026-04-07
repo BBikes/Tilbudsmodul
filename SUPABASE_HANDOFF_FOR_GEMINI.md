@@ -90,6 +90,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<same as Booking>
 SUPABASE_SERVICE_ROLE_KEY=<same as Booking>
 BIKEDESK_API_URL=https://app.bikedesk.dk/api/v1
 BIKEDESK_API_KEY=<same as Booking>
+`BIKEDESK_API_USER_ID=<BikeDesk user id for API comments>`
 NEXT_PUBLIC_APP_URL=https://YOUR_TILBUDSMODUL_URL
 ADMIN_EMAILS=service@b-bikes.dk
 CRON_SECRET=<generate a strong random secret>

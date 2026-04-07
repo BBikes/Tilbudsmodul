@@ -31,3 +31,19 @@ export function getBikedeskAuthHeaders(): Record<string, string> {
     'Content-Type': 'application/json',
   };
 }
+
+export function getBikedeskApiUserId(): number | null {
+  const configured = process.env.BIKEDESK_API_USER_ID?.trim();
+
+  if (!configured) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(configured, 10);
+
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error('BIKEDESK_API_USER_ID skal være et positivt heltal');
+  }
+
+  return parsed;
+}

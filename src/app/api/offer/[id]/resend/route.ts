@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
-import { sendSms } from '@/lib/bikedesk';
+import { createTicketSmsComment, sendSms } from '@/lib/bikedesk';
+import { getBikedeskApiUserId } from '@/lib/bikedesk-config';
 import { buildOfferSlug, resolvePublicAppUrl } from '@/lib/offer-link';
-import { buildOfferSmsText } from '@/lib/offer-sms';
-import type { Offer, OfferSettings } from '@/types';
+import { buildOfferSmsCommentText, buildOfferSmsText } from '@/lib/offer-sms';
+import type { OfferSettings } from '@/types';
 import { DEFAULT_OFFER_SETTINGS } from '@/types';
 
 async function requireAdmin() {
@@ -41,6 +42,13 @@ export async function POST(
   const expiresAt = new Date(sentAt.getTime() + settings.expiry_hours * 60 * 60 * 1000);
   const appUrl = resolvePublicAppUrl(_req);
   const publicSlug = buildOfferSlug(original.work_order_id, sentAt);
+  let commentUserId: number | null = null;
+
+  try {
+    commentUserId = getBikedeskApiUserId();
+  } catch (err) {
+    console.error('[resend] Invalid API user id', err);
+  }
 
   // Create new offer row (new token)
   const { data: newOffer } = await supabase
@@ -88,6 +96,25 @@ export async function POST(
       });
 
       if (smsResult.batchid) {
+        if (commentUserId) {
+          const commentBody = buildOfferSmsCommentText({
+            workOrderId: original.work_order_id,
+            smsText,
+            expiresAt,
+            templates: original.templates_snapshot,
+            totalAmount: original.total_amount,
+            isResend: true,
+          });
+
+          await createTicketSmsComment({
+            ticketId: parseInt(original.work_order_id, 10),
+            smsLogId: smsResult.batchid,
+            userId: commentUserId,
+            comment: commentBody,
+            autocomment: 'sms_other',
+          });
+        }
+
         await supabase
           .from('offers')
           .update({ bikedesk_sms_batch_id: smsResult.batchid })
