@@ -1,6 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import type { OfferTemplate } from '@/types';
-import TemplatesClient from './TemplatesClient';
+import TemplatesClient from '@/app/(admin)/templates/TemplatesClient';
 
 export default async function TemplatesPage() {
   const supabase = await createServiceClient();
@@ -10,7 +10,6 @@ export default async function TemplatesPage() {
     .select('*')
     .order('title');
 
-  // Last sync time from first template's synced_at
   const lastSync = (templates ?? []).reduce<string | null>((latest, t) => {
     if (!t.synced_at) return latest;
     if (!latest) return t.synced_at;

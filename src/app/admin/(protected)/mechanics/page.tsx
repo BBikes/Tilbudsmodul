@@ -1,6 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import type { Mechanic } from '@/types';
-import MechanicsClient from './MechanicsClient';
+import MechanicsClient from '@/app/(admin)/mechanics/MechanicsClient';
 
 export default async function MechanicsPage() {
   const supabase = await createServiceClient();

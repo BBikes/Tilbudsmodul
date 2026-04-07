@@ -1,7 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import type { OfferSettings } from '@/types';
 import { DEFAULT_OFFER_SETTINGS } from '@/types';
-import SettingsClient from './SettingsClient';
+import SettingsClient from '@/app/(admin)/settings/SettingsClient';
 import { getTags } from '@/lib/bikedesk-tags';
 
 export default async function SettingsPage() {
@@ -21,7 +21,7 @@ export default async function SettingsPage() {
   try {
     tags = await getTags();
   } catch {
-    // Non-critical — settings can still be saved without tag labels
+    // Non-critical; settings can still be saved without tag labels.
   }
 
   return <SettingsClient settings={settings} availableTags={tags} />;

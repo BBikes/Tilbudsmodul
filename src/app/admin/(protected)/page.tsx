@@ -1,6 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import type { Offer } from '@/types';
-import OffersClient from './OffersClient';
+import OffersClient from '@/app/(admin)/OffersClient';
 
 export default async function AdminOffersPage() {
   const supabase = await createServiceClient();
