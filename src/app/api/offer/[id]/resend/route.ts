@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
-import { createTicketComment, sendSms, findTicketByWorkOrderNumber } from '@/lib/bikedesk';
+import { createTicketComment, sendSms, findTicketByWorkOrderNumber, findPlannerUser, getSmsLogBatch } from '@/lib/bikedesk';
 import { getBikedeskApiUserId } from '@/lib/bikedesk-config';
 import { buildOfferSlug, resolvePublicAppUrl } from '@/lib/offer-link';
 import { buildOfferDetailsCommentText, buildOfferSmsText } from '@/lib/offer-sms';
@@ -47,20 +47,22 @@ export async function POST(
 
   try {
     ticket = await findTicketByWorkOrderNumber(original.work_order_id);
-    if (ticket?.assignee) {
-      commentUserId = ticket.assignee;
-    }
   } catch (err) {
     console.warn('[resend] getTicket failed early', err);
   }
 
-  if (!commentUserId) {
-    try {
-      commentUserId = getBikedeskApiUserId();
-    } catch (err) {
-      console.error('[resend] Invalid API user id', err);
-    }
+  // Strategy: Planlægningen > ticket assignee > API user
+  try {
+    const planner = await findPlannerUser();
+    commentUserId = planner?.id ?? null;
+  } catch (err) {
+    console.warn('[resend] Could not find Planlægningen user', err);
   }
+  if (!commentUserId) commentUserId = ticket?.assignee ?? null;
+  if (!commentUserId) {
+    try { commentUserId = getBikedeskApiUserId(); } catch { /* no-op */ }
+  }
+  console.log('[resend] commentUserId resolved to:', commentUserId);
 
   // Create new offer row (new token)
   const { data: newOffer } = await supabase
@@ -110,33 +112,46 @@ export async function POST(
       if (smsResult.batchid) {
         if (commentUserId && ticket) {
           try {
+            // Wait briefly for BikeDesk to process the batch
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+
+            let smsLogId: number | undefined;
+            try {
+              const batch = await getSmsLogBatch(smsResult.batchid);
+              smsLogId = batch.entries[0]?.id;
+            } catch (err) {
+              console.warn('[resend] Could not resolve smsLogId from batch', err);
+            }
+
             // 1. Raw SMS Comment
             await createTicketComment({
               ticketId: ticket.id,
-                smsLogId: smsResult.batchid,
-                userId: commentUserId,
-                comment: `SMS sendt til kunde:\n${smsText}`,
-                autocomment: 'sms_other',
-              });
+              smsLogId: smsLogId ?? smsResult.batchid,
+              userId: commentUserId,
+              comment: `SMS sendt til kunde:\n${smsText}`,
+              autocomment: 'sms_other',
+            });
 
-              // 2. Offer Details Comment
-              const detailsBody = buildOfferDetailsCommentText({
-                workOrderId: original.work_order_id,
-                expiresAt,
-                templates: original.templates_snapshot,
-                totalAmount: original.total_amount,
-                isResend: true,
-              });
+            // 2. Offer Details Comment
+            const detailsBody = buildOfferDetailsCommentText({
+              workOrderId: original.work_order_id,
+              expiresAt,
+              templates: original.templates_snapshot,
+              totalAmount: original.total_amount,
+              isResend: true,
+            });
 
-              await createTicketComment({
-                ticketId: ticket.id,
-                userId: commentUserId,
-                comment: detailsBody,
-                autocomment: 'other',
-              });
+            await createTicketComment({
+              ticketId: ticket.id,
+              userId: commentUserId,
+              comment: detailsBody,
+              autocomment: 'other',
+            });
           } catch (commentErr) {
             console.error('[resend] Failed to create comment', commentErr);
           }
+        } else {
+          console.warn('[resend] Skipping comment: ticket=', ticket?.id, 'commentUserId=', commentUserId);
         }
 
         await supabase

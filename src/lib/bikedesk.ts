@@ -143,6 +143,39 @@ export async function getUsers(): Promise<BikedeskUser[]> {
   return bdFetch<BikedeskUser[]>('/users');
 }
 
+function normalizeSearchValue(value: string): string {
+  return value
+    .replace(/æ/gi, 'ae')
+    .replace(/ø/gi, 'oe')
+    .replace(/å/gi, 'aa')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+/**
+ * Finds the "Planlægningen" user in BikeDesk (same strategy as Booking project).
+ * Used as a fallback comment author for SMS comments.
+ */
+export async function findPlannerUser(): Promise<BikedeskUser | null> {
+  const users = await getUsers();
+  const activeUsers = users.filter((u) => u.deleted !== 1);
+  const exactMatch =
+    activeUsers.find((u) => {
+      const haystack = normalizeSearchValue(`${u.name ?? ''} ${u.username ?? ''}`.trim());
+      return haystack === 'planlaegningen' || haystack === 'planlaegning';
+    }) ?? null;
+
+  if (exactMatch) return exactMatch;
+
+  return (
+    activeUsers.find((u) => {
+      const haystack = normalizeSearchValue(`${u.name ?? ''} ${u.username ?? ''}`);
+      return haystack.includes('planlaegning') || haystack.includes('planlaeg');
+    }) ?? null
+  );
+}
+
 // ---------------------------------------------------------------------------
 // SMS
 // ---------------------------------------------------------------------------
@@ -196,4 +229,55 @@ export async function createTicketComment(data: {
       },
     }),
   });
+}
+
+// ---------------------------------------------------------------------------
+// SMS Log
+// ---------------------------------------------------------------------------
+
+export type BikedeskSmsLogEntry = {
+  id: number;
+  message?: string;
+  gateway_status?: string | null;
+  gateway_id?: number | string | null;
+  error_status?: string | null;
+};
+
+export type BikedeskSmsLogBatch = {
+  entries: BikedeskSmsLogEntry[];
+  count: number;
+  failedCount: number;
+};
+
+type BikedeskSmsLogBatchResponse = {
+  content?: BikedeskSmsLogEntry[];
+  count?: number;
+  failed_count?: number;
+};
+
+async function bdFetchRaw<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const url = `${BASE_URL}${path}`;
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      ...getBikedeskAuthHeaders(),
+      ...options.headers,
+    },
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Bikedesk ${options.method ?? 'GET'} ${path} fejlede: ${res.status} ${body}`);
+  }
+
+  return (await res.json()) as T;
+}
+
+export async function getSmsLogBatch(batchId: number): Promise<BikedeskSmsLogBatch> {
+  const payload = await bdFetchRaw<BikedeskSmsLogBatchResponse>(`/smslog/${batchId}`);
+  return {
+    entries: payload.content ?? [],
+    count: payload.count ?? payload.content?.length ?? 0,
+    failedCount: payload.failed_count ?? 0,
+  };
 }
