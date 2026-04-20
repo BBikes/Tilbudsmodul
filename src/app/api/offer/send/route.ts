@@ -110,16 +110,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: CONFIRM_WORK_ORDER_MISMATCH_ERROR }, { status: 400 });
   }
 
-  if (!body.templates || body.templates.length === 0) {
-    return NextResponse.json({ success: false, error: 'Ingen ydelser valgt' }, { status: 400 });
-  }
-
   let extraWorkItem: OfferExtraWorkItemInput | null = null;
   try {
     extraWorkItem = parseExtraWorkItem(body.extraWorkItem);
   } catch (err) {
     return NextResponse.json(
       { success: false, error: err instanceof Error ? err.message : 'Ugyldig ekstralinje' },
+      { status: 400 },
+    );
+  }
+
+  const hasTemplates = Array.isArray(body.templates) && body.templates.length > 0;
+  if (!hasTemplates && !extraWorkItem) {
+    return NextResponse.json(
+      { success: false, error: 'Vælg mindst én ydelse eller udfyld en ekstra linje' },
       { status: 400 },
     );
   }

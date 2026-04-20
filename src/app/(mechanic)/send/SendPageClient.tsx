@@ -143,7 +143,8 @@ export default function SendPageClient({
 
   const selectedTemplateCount = selected.size;
   const selectedLineCount = selectedTemplateCount + (extraWorkItem ? 1 : 0);
-  const sendDisabled = selectedTemplateCount === 0 || !isExtraWorkValid;
+  const hasValidExtraWork = isExtraWorkValid && extraWorkItem !== null;
+  const sendDisabled = (selectedTemplateCount === 0 && !hasValidExtraWork) || !isExtraWorkValid;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -281,10 +282,10 @@ export default function SendPageClient({
               disabled={sendDisabled}
               className="w-full rounded-xl bg-gray-900 py-3.5 font-medium text-white transition-opacity hover:bg-gray-800 disabled:opacity-40"
             >
-              {selectedTemplateCount === 0
-                ? 'Vælg mindst en ydelse'
-                : !isExtraWorkValid
-                  ? 'Udfyld ekstralinje korrekt'
+              {!isExtraWorkValid
+                ? 'Udfyld ekstralinje korrekt'
+                : selectedTemplateCount === 0 && !hasValidExtraWork
+                  ? 'Vælg en ydelse eller udfyld ekstralinje'
                   : `Send tilbud (${selectedLineCount})`}
             </button>
 
