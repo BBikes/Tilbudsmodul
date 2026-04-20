@@ -80,7 +80,7 @@ export default function SendPageClient({
       ? extraWorkItem.bb15Quantity * bb15UnitPrice
       : null;
 
-  const handleSend = async () => {
+  const handleSend = async (confirmWorkOrderId: string) => {
     const snapshots = buildTemplateSnapshots(templates, selected);
 
     const res = await fetch('/api/offer/send', {
@@ -88,6 +88,7 @@ export default function SendPageClient({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         workOrderId,
+        confirmWorkOrderId,
         mechanicId: mechanic.id,
         mechanicName: mechanic.name,
         mechanicBikedeskUserId: mechanic.bikedesk_user_id,
@@ -116,18 +117,18 @@ export default function SendPageClient({
         <Header />
         <div className="flex-1 flex items-center justify-center px-4">
           <div className="w-full max-w-sm text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
                 <path d="M5 13l4 4L19 7" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Tilbud sendt</h2>
-            <p className="text-sm text-gray-500 mb-1">Sag #{workOrderId}</p>
-            <p className="text-sm text-gray-500 mb-1">{customer.name}</p>
-            <p className="text-xs text-gray-400 mb-8">Udloeber om {expiryHours} timer</p>
+            <h2 className="mb-2 text-xl font-bold text-gray-900">Tilbud sendt</h2>
+            <p className="mb-1 text-sm text-gray-500">Sag #{workOrderId}</p>
+            <p className="mb-1 text-sm text-gray-500">{customer.name}</p>
+            <p className="mb-8 text-xs text-gray-400">Udløber om {expiryHours} timer</p>
             <button
               onClick={() => router.push('/')}
-              className="w-full py-3 bg-gray-900 text-white rounded-xl font-medium hover:bg-gray-800"
+              className="w-full rounded-xl bg-gray-900 py-3 font-medium text-white hover:bg-gray-800"
             >
               Nyt tilbud
             </button>
@@ -146,23 +147,23 @@ export default function SendPageClient({
       <Header />
 
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6">
-        <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700 mb-5">
+        <Link href="/" className="mb-5 inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700">
           <ArrowLeft size={14} />
           Skift sag
         </Link>
 
-        <div className="flex flex-col lg:flex-row gap-5 items-start">
-          <div className="flex-1 min-w-0 space-y-4">
-            <div className="bg-white rounded-2xl border border-gray-100 p-5">
-              <div className="flex items-center justify-between mb-4">
+        <div className="flex items-start gap-5 flex-col lg:flex-row">
+          <div className="min-w-0 flex-1 space-y-4">
+            <div className="rounded-2xl border border-gray-100 bg-white p-5">
+              <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <h2 className="text-sm font-semibold text-gray-900">Vaelg ydelser</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {templates.length} skabeloner · vaelg og tildel prioritet
+                  <h2 className="text-sm font-semibold text-gray-900">Vælg ydelser</h2>
+                  <p className="mt-0.5 text-xs text-gray-400">
+                    {templates.length} skabeloner · vælg og tildel prioritet
                   </p>
                 </div>
                 {selectedTemplateCount > 0 && (
-                  <span className="text-xs font-medium bg-gray-100 text-gray-700 px-2.5 py-1 rounded-full">
+                  <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700">
                     {selectedTemplateCount} valgt
                   </span>
                 )}
@@ -175,27 +176,28 @@ export default function SendPageClient({
               />
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
+            <div className="space-y-4 rounded-2xl border border-gray-100 bg-white p-5">
               <div>
                 <h2 className="text-sm font-semibold text-gray-900">Ekstra linje</h2>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  Valgfri linje med fritekst. Titlen vises for kunden og skrives i arbejdskortets titel, mens antal 15 minutter bliver til BB15 x antal.
+                <p className="mt-0.5 text-xs text-gray-400">
+                  Valgfri linje med fritekst. Titlen vises for kunden og skrives i arbejdskortets titel,
+                  mens antal 15 minutter bliver til BB15 x antal.
                 </p>
               </div>
 
               <label className="block">
-                <span className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Titel</span>
+                <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-500">Titel</span>
                 <input
                   type="text"
                   value={extraWorkTitle}
-                  onChange={(e) => setExtraWorkTitle(e.target.value)}
+                  onChange={(event) => setExtraWorkTitle(event.target.value)}
                   placeholder="Fritekst til arbejdskortets titel"
                   className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
                 />
               </label>
 
               <div>
-                <span className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-500">
                   15-minutters blokke
                 </span>
                 <div className="flex items-center gap-2">
@@ -211,8 +213,8 @@ export default function SendPageClient({
                     min={0}
                     step={1}
                     value={extraWorkBlocks === 0 ? '' : extraWorkBlocks}
-                    onChange={(e) => {
-                      const parsed = Number.parseInt(e.target.value, 10);
+                    onChange={(event) => {
+                      const parsed = Number.parseInt(event.target.value, 10);
                       setExtraWorkBlocks(Number.isInteger(parsed) && parsed > 0 ? parsed : 0);
                     }}
                     placeholder="0"
@@ -231,7 +233,8 @@ export default function SendPageClient({
 
               {extraWorkItem && extraWorkTotal !== null && (
                 <p className="text-sm text-gray-500">
-                  Estimeret pris: {new Intl.NumberFormat('da-DK', {
+                  Estimeret pris:{' '}
+                  {new Intl.NumberFormat('da-DK', {
                     style: 'currency',
                     currency: 'DKK',
                     maximumFractionDigits: 0,
@@ -241,50 +244,46 @@ export default function SendPageClient({
 
               {hasExtraWorkInput && !isExtraWorkValid && (
                 <p className="text-sm text-red-600">
-                  Udfyld baade titel og et positivt antal 15-minutters blokke for at bruge ekstralinjen.
+                  Udfyld både titel og et positivt antal 15-minutters blokke for at bruge ekstralinjen.
                 </p>
               )}
             </div>
 
             <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Billeder</p>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">Billeder</p>
               <ImageSelector />
             </div>
           </div>
 
-          <div className="w-full lg:w-72 flex-shrink-0 space-y-4">
-            <CustomerPanel
-              workOrderId={workOrderId}
-              ticket={ticket}
-              customer={customer}
-            />
+          <div className="w-full shrink-0 space-y-4 lg:w-72">
+            <CustomerPanel workOrderId={workOrderId} ticket={ticket} customer={customer} />
 
             <button
               onClick={() => setShowPreview(true)}
               disabled={sendDisabled}
-              className="w-full py-3.5 bg-gray-900 text-white rounded-xl font-medium hover:bg-gray-800 disabled:opacity-40 transition-opacity"
+              className="w-full rounded-xl bg-gray-900 py-3.5 font-medium text-white transition-opacity hover:bg-gray-800 disabled:opacity-40"
             >
               {selectedTemplateCount === 0
-                ? 'Vaelg mindst en ydelse'
+                ? 'Vælg mindst en ydelse'
                 : !isExtraWorkValid
                   ? 'Udfyld ekstralinje korrekt'
                   : `Send tilbud (${selectedLineCount})`}
             </button>
 
-            <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-2">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Prioritet</p>
+            <div className="space-y-2 rounded-xl border border-gray-100 bg-white p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Prioritet</p>
               <div className="space-y-1.5 text-xs text-gray-600">
                 <div className="flex items-center gap-2">
-                  <span className="text-red-600 text-[10px]">▲</span>
-                  <span>Noedvendig for funktion</span>
+                  <span className="text-[10px] text-red-600">▲</span>
+                  <span>Nødvendig for funktion</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-yellow-500 text-[10px]">▲</span>
-                  <span>Boer udbedres, ikke kritisk</span>
+                  <span className="text-[10px] text-yellow-500">▲</span>
+                  <span>Bør udbedres, ikke kritisk</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-green-600 text-[10px]">●</span>
-                  <span>Inden naeste service</span>
+                  <span className="text-[10px] text-green-600">●</span>
+                  <span>Inden næste service</span>
                 </div>
               </div>
             </div>
@@ -311,8 +310,8 @@ export default function SendPageClient({
 
 function Header() {
   return (
-    <header className="bg-white border-b border-gray-100 px-4">
-      <div className="max-w-6xl mx-auto flex items-center h-14">
+    <header className="border-b border-gray-100 bg-white px-4">
+      <div className="mx-auto flex h-14 max-w-6xl items-center">
         <Image
           src="https://b-bikes.dk/wp-content/uploads/Logo-Wide.svg"
           alt="B-Bikes"

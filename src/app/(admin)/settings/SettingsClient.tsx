@@ -2,6 +2,7 @@
 
 import { useId, useState } from 'react';
 import type { OfferSettings } from '@/types';
+import { DEFAULT_SMS_TEMPLATE, validateSmsTemplate } from '@/lib/offer-sms';
 import { Check, ChevronDown, Loader2, Search, X } from 'lucide-react';
 
 interface Props {
@@ -23,9 +24,16 @@ export default function SettingsClient({
   const update = (patch: Partial<OfferSettings>) => setS((prev) => ({ ...prev, ...patch }));
 
   const handleSave = async () => {
-    setLoading(true);
     setSaved(false);
     setError(null);
+
+    const smsTemplateError = validateSmsTemplate(s.sms_template);
+    if (smsTemplateError) {
+      setError(smsTemplateError);
+      return;
+    }
+
+    setLoading(true);
     try {
       const res = await fetch('/api/admin/settings', {
         method: 'POST',
@@ -46,14 +54,13 @@ export default function SettingsClient({
     <div>
       <div className="mb-6">
         <h1 className="text-xl font-bold text-gray-900">Indstillinger</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Tilbudsmodul konfiguration</p>
+        <p className="mt-0.5 text-sm text-gray-400">Tilbudsmodul konfiguration</p>
       </div>
 
-      {error && <div className="bg-red-50 text-red-600 text-sm rounded-xl p-3 mb-4">{error}</div>}
-      {saved && <div className="bg-green-50 text-green-700 text-sm rounded-xl p-3 mb-4">Indstillinger gemt</div>}
+      {error && <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-600">{error}</div>}
+      {saved && <div className="mb-4 rounded-xl bg-green-50 p-3 text-sm text-green-700">Indstillinger gemt</div>}
 
-      <div className="space-y-5 max-w-2xl">
-        {/* Expiry */}
+      <div className="max-w-2xl space-y-5">
         <Section title="Tilbudsudløb">
           <Field label="Udløb (timer)">
             <input
@@ -61,19 +68,18 @@ export default function SettingsClient({
               min={1}
               max={720}
               value={s.expiry_hours}
-              onChange={(e) => update({ expiry_hours: parseInt(e.target.value) || 72 })}
+              onChange={(event) => update({ expiry_hours: parseInt(event.target.value, 10) || 72 })}
               className={inputCls}
             />
           </Field>
         </Section>
 
-        {/* Contact for expired page */}
         <Section title="Kontaktinfo på udløbet side">
           <Field label="Telefonnummer">
             <input
               type="text"
               value={s.expired_phone}
-              onChange={(e) => update({ expired_phone: e.target.value })}
+              onChange={(event) => update({ expired_phone: event.target.value })}
               placeholder="+45 12 34 56 78"
               className={inputCls}
             />
@@ -82,7 +88,7 @@ export default function SettingsClient({
             <input
               type="email"
               value={s.expired_email}
-              onChange={(e) => update({ expired_email: e.target.value })}
+              onChange={(event) => update({ expired_email: event.target.value })}
               placeholder="service@b-bikes.dk"
               className={inputCls}
             />
@@ -93,8 +99,8 @@ export default function SettingsClient({
           <Field label="SMS-skabelon til kunden">
             <textarea
               value={s.sms_template}
-              onChange={(e) => update({ sms_template: e.target.value })}
-              placeholder={defaultSmsTemplatePlaceholder}
+              onChange={(event) => update({ sms_template: event.target.value })}
+              placeholder={DEFAULT_SMS_TEMPLATE}
               rows={8}
               className={`${inputCls} min-h-44 resize-y`}
             />
@@ -104,7 +110,6 @@ export default function SettingsClient({
           </p>
         </Section>
 
-        {/* Template group */}
         <Section title="Skabeloner">
           <Field label="Hovedgruppe der må vises for mekanikeren">
             <SearchableSingleSelect
@@ -117,36 +122,35 @@ export default function SettingsClient({
           </Field>
         </Section>
 
-        {/* Tag mappings */}
-        <Section title="Mærkning (Tags)">
+        <Section title="Mærkning (tags)">
           <TagsField
             label="Tags tilføjes ved afsendelse"
             value={s.tags_on_sent}
-            onChange={(v) => update({ tags_on_sent: v })}
+            onChange={(value) => update({ tags_on_sent: value })}
             available={availableTags}
           />
           <TagsField
             label="Tags tilføjes ved accept"
             value={s.tags_on_accepted}
-            onChange={(v) => update({ tags_on_accepted: v })}
+            onChange={(value) => update({ tags_on_accepted: value })}
             available={availableTags}
           />
           <TagsField
             label="Tags fjernes ved accept"
             value={s.tags_remove_on_accepted}
-            onChange={(v) => update({ tags_remove_on_accepted: v })}
+            onChange={(value) => update({ tags_remove_on_accepted: value })}
             available={availableTags}
           />
           <TagsField
             label="Tags tilføjes ved afvisning"
             value={s.tags_on_rejected}
-            onChange={(v) => update({ tags_on_rejected: v })}
+            onChange={(value) => update({ tags_on_rejected: value })}
             available={availableTags}
           />
           <TagsField
             label="Tags fjernes ved afvisning"
             value={s.tags_remove_on_rejected}
-            onChange={(v) => update({ tags_remove_on_rejected: v })}
+            onChange={(value) => update({ tags_remove_on_rejected: value })}
             available={availableTags}
           />
         </Section>
@@ -154,7 +158,7 @@ export default function SettingsClient({
         <button
           onClick={handleSave}
           disabled={loading}
-          className="px-6 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-800 disabled:opacity-40 flex items-center gap-2"
+          className="flex items-center gap-2 rounded-xl bg-gray-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-40"
         >
           {loading && <Loader2 size={14} className="animate-spin" />}
           Gem indstillinger
@@ -166,8 +170,8 @@ export default function SettingsClient({
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-3">
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{title}</p>
+    <div className="space-y-3 rounded-2xl border border-gray-100 bg-white p-5">
+      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{title}</p>
       {children}
     </div>
   );
@@ -176,7 +180,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+      <label className="mb-1 block text-xs font-medium text-gray-600">{label}</label>
       {children}
     </div>
   );
@@ -190,12 +194,12 @@ function TagsField({
 }: {
   label: string;
   value: number[];
-  onChange: (v: number[]) => void;
+  onChange: (value: number[]) => void;
   available: { id: number; label: string }[];
 }) {
   return (
     <div>
-      <p className="text-xs font-medium text-gray-600 mb-2">{label}</p>
+      <p className="mb-2 text-xs font-medium text-gray-600">{label}</p>
       {available.length === 0 ? (
         <p className="text-xs text-gray-400">Ingen tags tilgængelige</p>
       ) : (
@@ -235,29 +239,27 @@ function SearchableSingleSelect({
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm flex items-center justify-between text-left focus:outline-none focus:ring-2 focus:ring-gray-900"
+        className="flex w-full items-center justify-between rounded-xl border border-gray-200 px-3 py-2.5 text-left text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
       >
-        <span className={selected ? 'text-gray-900' : 'text-gray-400'}>
-          {selected?.label ?? placeholder}
-        </span>
+        <span className={selected ? 'text-gray-900' : 'text-gray-400'}>{selected?.label ?? placeholder}</span>
         <ChevronDown size={16} className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
-        <div className="border border-gray-200 rounded-2xl bg-white p-3 space-y-3">
+        <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-3">
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               id={searchId}
               type="text"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(event) => setQuery(event.target.value)}
               placeholder="Søg..."
-              className="w-full border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+              className="w-full rounded-xl border border-gray-200 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
             />
           </div>
 
-          <div className="space-y-1 max-h-56 overflow-y-auto">
+          <div className="max-h-56 space-y-1 overflow-y-auto">
             <button
               type="button"
               onClick={() => {
@@ -265,8 +267,8 @@ function SearchableSingleSelect({
                 setOpen(false);
                 setQuery('');
               }}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
-                value === null ? 'bg-gray-900 text-white' : 'hover:bg-gray-50 text-gray-700'
+              className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm ${
+                value === null ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-50'
               }`}
             >
               <span>Vis alle hovedgrupper</span>
@@ -285,8 +287,8 @@ function SearchableSingleSelect({
                     setOpen(false);
                     setQuery('');
                   }}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
-                    value === option.value ? 'bg-gray-900 text-white' : 'hover:bg-gray-50 text-gray-700'
+                  className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm ${
+                    value === option.value ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
                   <span>{option.label}</span>
@@ -333,7 +335,7 @@ function SearchableMultiSelect({
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm flex items-center justify-between text-left focus:outline-none focus:ring-2 focus:ring-gray-900"
+        className="flex w-full items-center justify-between rounded-xl border border-gray-200 px-3 py-2.5 text-left text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
       >
         <span className={selectedLabels.length > 0 ? 'text-gray-900' : 'text-gray-400'}>
           {selectedLabels.length > 0 ? `${selectedLabels.length} valgt` : placeholder}
@@ -348,7 +350,7 @@ function SearchableMultiSelect({
               key={option.value}
               type="button"
               onClick={() => toggle(option.value)}
-              className="inline-flex items-center gap-1 rounded-full bg-gray-100 text-gray-700 px-3 py-1 text-xs font-medium hover:bg-gray-200"
+              className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
             >
               <span>{option.label}</span>
               <X size={12} />
@@ -358,20 +360,20 @@ function SearchableMultiSelect({
       )}
 
       {open && (
-        <div className="border border-gray-200 rounded-2xl bg-white p-3 space-y-3">
+        <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-3">
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               id={searchId}
               type="text"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(event) => setQuery(event.target.value)}
               placeholder="Søg..."
-              className="w-full border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+              className="w-full rounded-xl border border-gray-200 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
             />
           </div>
 
-          <div className="space-y-1 max-h-64 overflow-y-auto">
+          <div className="max-h-64 space-y-1 overflow-y-auto">
             {filtered.length === 0 ? (
               <p className="px-3 py-2 text-sm text-gray-400">{emptyText}</p>
             ) : (
@@ -382,8 +384,8 @@ function SearchableMultiSelect({
                     key={option.value}
                     type="button"
                     onClick={() => toggle(option.value)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
-                      checked ? 'bg-gray-900 text-white' : 'hover:bg-gray-50 text-gray-700'
+                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm ${
+                      checked ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-50'
                     }`}
                   >
                     <span>{option.label}</span>
@@ -400,17 +402,4 @@ function SearchableMultiSelect({
 }
 
 const inputCls =
-  'w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900';
-
-const defaultSmsTemplatePlaceholder = [
-  'Hej {customerName},',
-  '',
-  'Vi har lavet et tilbud til dig på din cykel (sag {workOrderId}).',
-  '',
-  'Se og godkend tilbuddet her:',
-  '{offerLink}',
-  '',
-  'Tilbuddet udløber {expiry}.',
-  '',
-  'Mvh B-Bikes',
-].join('\n');
+  'w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900';

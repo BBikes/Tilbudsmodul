@@ -15,7 +15,7 @@ import { DEFAULT_OFFER_SETTINGS } from '@/types';
 const BB15_PRODUCT_CODE = 'BB15';
 
 function formatAcceptedLine(title: string, price: number) {
-  return `${title}${price > 0 ? ` — ${price} kr.` : ''}`;
+  return `${title}${price > 0 ? ` - ${price} kr.` : ''}`;
 }
 
 function buildResponseCommentText(opts: {
@@ -51,10 +51,10 @@ function buildResponseCommentText(opts: {
   if (rejectedLineCount > 0) {
     lines.push('');
     lines.push('Ikke accepteret:');
-    lines.push(...opts.rejectedTemplates.map((template) => `✗ ${template.title}`));
+    lines.push(...opts.rejectedTemplates.map((template) => `✕ ${template.title}`));
 
     if (opts.rejectedExtraWorkItem) {
-      lines.push(`✗ ${opts.rejectedExtraWorkItem.title}`);
+      lines.push(`✕ ${opts.rejectedExtraWorkItem.title}`);
     }
   }
 
@@ -66,7 +66,7 @@ function buildResponseCommentText(opts: {
 
 export async function POST(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
 
@@ -198,7 +198,7 @@ export async function POST(
           ticket.id,
           ticket,
           settings.tags_on_accepted,
-          settings.tags_remove_on_accepted
+          settings.tags_remove_on_accepted,
         );
       }
     } else if (body.action === 'reject') {
@@ -207,7 +207,7 @@ export async function POST(
           ticket.id,
           ticket,
           settings.tags_on_rejected,
-          settings.tags_remove_on_rejected
+          settings.tags_remove_on_rejected,
         );
       }
     }

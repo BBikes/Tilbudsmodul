@@ -16,8 +16,8 @@ export default function WorkOrderEntryClient({ mechanicName }: { mechanicName: s
     inputRef.current?.focus();
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!workOrderId.trim()) return;
     setError(null);
     setLoading(true);
@@ -46,9 +46,8 @@ export default function WorkOrderEntryClient({ mechanicName }: { mechanicName: s
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Top bar */}
-      <header className="bg-white border-b border-gray-100 px-4">
-        <div className="max-w-xl mx-auto flex items-center justify-between h-14">
+      <header className="border-b border-gray-100 bg-white px-4">
+        <div className="mx-auto flex h-14 max-w-xl items-center justify-between">
           <Image
             src="https://b-bikes.dk/wp-content/uploads/Logo-Wide.svg"
             alt="B-Bikes"
@@ -58,12 +57,10 @@ export default function WorkOrderEntryClient({ mechanicName }: { mechanicName: s
             className="h-7 w-auto"
           />
           <div className="flex items-center gap-3">
-            {mechanicName && (
-              <span className="text-sm text-gray-500">{mechanicName}</span>
-            )}
+            {mechanicName && <span className="text-sm text-gray-500">{mechanicName}</span>}
             <button
               onClick={handleLogout}
-              className="text-gray-400 hover:text-gray-700 p-1"
+              className="p-1 text-gray-400 hover:text-gray-700"
               title="Log ud"
             >
               <LogOut size={16} />
@@ -72,15 +69,12 @@ export default function WorkOrderEntryClient({ mechanicName }: { mechanicName: s
         </div>
       </header>
 
-      {/* Main */}
-      <main className="flex-1 flex items-center justify-center px-4 py-12">
+      <main className="flex flex-1 items-center justify-center px-4 py-12">
         <div className="w-full max-w-xs">
-          <h1 className="text-xl font-bold text-gray-900 mb-1">Opret tilbud</h1>
-          <p className="text-sm text-gray-400 mb-8">Indtast sagsnummeret fra Bikedesk</p>
+          <h1 className="mb-1 text-xl font-bold text-gray-900">Opret tilbud</h1>
+          <p className="mb-8 text-sm text-gray-400">Indtast sagsnummeret fra Bikedesk</p>
 
-          {error && (
-            <div className="bg-red-50 text-red-600 text-sm rounded-xl p-3 mb-4">{error}</div>
-          )}
+          {error && <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-600">{error}</div>}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative">
@@ -90,16 +84,16 @@ export default function WorkOrderEntryClient({ mechanicName }: { mechanicName: s
                 type="text"
                 inputMode="numeric"
                 value={workOrderId}
-                onChange={(e) => setWorkOrderId(e.target.value)}
+                onChange={(event) => setWorkOrderId(event.target.value)}
                 placeholder="Sagsnummer"
                 required
-                className="w-full border border-gray-200 rounded-xl pl-10 pr-4 py-4 text-lg font-medium focus:outline-none focus:ring-2 focus:ring-gray-900"
+                className="w-full rounded-xl border border-gray-200 py-4 pl-10 pr-4 text-lg font-medium focus:outline-none focus:ring-2 focus:ring-gray-900"
               />
             </div>
             <button
               type="submit"
               disabled={loading || !workOrderId}
-              className="w-full py-4 bg-gray-900 text-white rounded-xl font-medium text-base hover:bg-gray-800 disabled:opacity-40 flex items-center justify-center gap-2"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 py-4 text-base font-medium text-white hover:bg-gray-800 disabled:opacity-40"
             >
               {loading && <Loader2 size={16} className="animate-spin" />}
               Hent sag

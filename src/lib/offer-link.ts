@@ -1,5 +1,3 @@
-import type { Offer } from '@/types';
-
 const DEFAULT_PUBLIC_APP_URL = 'https://tilbud.b-bikes.dk';
 
 function normalizePublicAppUrl(value: string) {
@@ -67,16 +65,12 @@ export function buildOfferSlug(workOrderId: string, sentAt: Date) {
   return `${normalizedWorkOrderId}-${parts.day}-${parts.month}-${parts.year}-${parts.hour}-${parts.minute}`;
 }
 
-export function getOfferIdentifier(offer: Pick<Offer, 'public_slug' | 'token'>) {
-  return offer.public_slug || offer.token;
-}
-
 export function buildOfferPath(identifier: string) {
   return `/${encodeURIComponent(identifier)}`;
 }
 
-export function buildPublicOfferUrl(identifier: string, appUrl = resolveClientPublicAppUrl()) {
-  return `${appUrl.replace(/\/$/, '')}${buildOfferPath(identifier)}`;
+export function buildPublicOfferUrl(publicSlug: string, appUrl = resolveClientPublicAppUrl()) {
+  return `${appUrl.replace(/\/$/, '')}${buildOfferPath(publicSlug)}`;
 }
 
 function resolveClientPublicAppUrl() {

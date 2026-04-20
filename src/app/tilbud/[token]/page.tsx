@@ -46,7 +46,6 @@ export default async function TilbudPage({ params }: Props) {
     return <NotFound />;
   }
 
-  // Load contact settings for expired page
   const { data: settingsRow } = await supabase
     .from('system_settings')
     .select('value')
@@ -57,7 +56,6 @@ export default async function TilbudPage({ params }: Props) {
     ? { ...DEFAULT_OFFER_SETTINGS, ...(settingsRow.value as Partial<OfferSettings>) }
     : DEFAULT_OFFER_SETTINGS;
 
-  // Mark as opened if it was just sent
   if (offer.status === 'sent' && !offer.opened_at) {
     await supabase
       .from('offers')
@@ -79,9 +77,9 @@ export default async function TilbudPage({ params }: Props) {
 function NotFound() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="text-center max-w-xs">
-        <p className="text-4xl mb-4">🔍</p>
-        <h1 className="text-lg font-bold text-gray-900 mb-2">Tilbud ikke fundet</h1>
+      <div className="max-w-xs text-center">
+        <p className="mb-4 text-4xl">⌕</p>
+        <h1 className="mb-2 text-lg font-bold text-gray-900">Tilbud ikke fundet</h1>
         <p className="text-sm text-gray-500">Dette link er ugyldigt eller udløbet.</p>
       </div>
     </div>

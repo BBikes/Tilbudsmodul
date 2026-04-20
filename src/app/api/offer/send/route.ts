@@ -1,17 +1,28 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { validateMechanicSession } from '@/lib/session';
-import { sendSms, createTicketComment, getTicket, updateTicketTags, findPlannerUser, getSmsLogBatch, findProductByCode } from '@/lib/bikedesk';
+import {
+  createTicketComment,
+  findPlannerUser,
+  findProductByCode,
+  getSmsLogBatch,
+  getTicket,
+  sendSms,
+  updateTicketTags,
+} from '@/lib/bikedesk';
 import { getBikedeskApiUserId } from '@/lib/bikedesk-config';
 import { buildOfferSlug, resolvePublicAppUrl } from '@/lib/offer-link';
-import { buildOfferSmsText } from '@/lib/offer-sms';
+import { buildOfferSmsText, validateSmsTemplate } from '@/lib/offer-sms';
 import type { OfferExtraWorkItemInput, OfferExtraWorkItemSnapshot, OfferSettings, OfferTemplateSnapshot } from '@/types';
 import { DEFAULT_OFFER_SETTINGS } from '@/types';
 
 const BB15_PRODUCT_CODE = 'BB15';
+const CONFIRM_WORK_ORDER_MISMATCH_ERROR = 'Sagsnummer matcher ikke';
+const TICKET_WORK_ORDER_MISMATCH_ERROR = 'Sagsnummer matcher ikke det valgte arbejdskort';
 
 interface SendOfferBody {
   workOrderId: string;
+  confirmWorkOrderId: string;
   mechanicId: string;
   mechanicName: string;
   mechanicBikedeskUserId: number | null;
@@ -31,8 +42,8 @@ function parseExtraWorkItem(input: OfferExtraWorkItemInput | null | undefined): 
 
   const title = input.title?.trim() ?? '';
   const quantity = Number.parseInt(String(input.bb15Quantity ?? ''), 10);
-
   const hasAnyValue = title.length > 0 || Number.isFinite(quantity);
+
   if (!hasAnyValue) {
     return null;
   }
@@ -45,6 +56,32 @@ function parseExtraWorkItem(input: OfferExtraWorkItemInput | null | undefined): 
     title,
     bb15Quantity: quantity,
   };
+}
+
+function normalizeWorkOrderValue(value: unknown) {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value);
+  }
+
+  return null;
+}
+
+function collectTicketWorkOrderValues(ticket: Record<string, unknown>) {
+  const candidates = new Set<string>();
+
+  for (const value of [ticket.id, ticket.cardno, ticket.autoincrementno, ticket.number]) {
+    const normalized = normalizeWorkOrderValue(value);
+    if (normalized) {
+      candidates.add(normalized);
+    }
+  }
+
+  return candidates;
 }
 
 export async function POST(req: Request) {
@@ -60,6 +97,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: 'Ugyldig forespørgsel' }, { status: 400 });
   }
 
+  const workOrderId = body.workOrderId?.trim() ?? '';
+  const confirmWorkOrderId = body.confirmWorkOrderId?.trim() ?? '';
+
+  if (!workOrderId || confirmWorkOrderId !== workOrderId) {
+    return NextResponse.json({ success: false, error: CONFIRM_WORK_ORDER_MISMATCH_ERROR }, { status: 400 });
+  }
+
   if (!body.templates || body.templates.length === 0) {
     return NextResponse.json({ success: false, error: 'Ingen ydelser valgt' }, { status: 400 });
   }
@@ -70,13 +114,23 @@ export async function POST(req: Request) {
   } catch (err) {
     return NextResponse.json(
       { success: false, error: err instanceof Error ? err.message : 'Ugyldig ekstralinje' },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
-  const supabase = await createServiceClient();
+  let ticket;
+  try {
+    ticket = await getTicket(body.ticketId);
+  } catch (err) {
+    console.warn('[offer/send] getTicket failed early', err);
+    return NextResponse.json({ success: false, error: 'Arbejdskort ikke fundet' }, { status: 400 });
+  }
 
-  // Load settings
+  if (!collectTicketWorkOrderValues(ticket).has(workOrderId)) {
+    return NextResponse.json({ success: false, error: TICKET_WORK_ORDER_MISMATCH_ERROR }, { status: 400 });
+  }
+
+  const supabase = await createServiceClient();
   const { data: settingsRow } = await supabase
     .from('system_settings')
     .select('value')
@@ -86,6 +140,11 @@ export async function POST(req: Request) {
   const settings: OfferSettings = settingsRow?.value
     ? { ...DEFAULT_OFFER_SETTINGS, ...(settingsRow.value as Partial<OfferSettings>) }
     : DEFAULT_OFFER_SETTINGS;
+  const smsTemplateError = validateSmsTemplate(settings.sms_template);
+
+  if (smsTemplateError) {
+    return NextResponse.json({ success: false, error: smsTemplateError }, { status: 500 });
+  }
 
   let extraWorkSnapshot: OfferExtraWorkItemSnapshot | null = null;
   if (extraWorkItem) {
@@ -93,14 +152,14 @@ export async function POST(req: Request) {
     if (!product) {
       return NextResponse.json(
         { success: false, error: 'Kunne ikke slå BB15 op i BikeDesk' },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     if (!Number.isFinite(product.price)) {
       return NextResponse.json(
         { success: false, error: 'BB15 har ingen gyldig pris i BikeDesk' },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -115,21 +174,14 @@ export async function POST(req: Request) {
   }
 
   const totalAmount =
-    body.templates.reduce((sum, t) => sum + (t.price ?? 0), 0) +
+    body.templates.reduce((sum, template) => sum + (template.price ?? 0), 0) +
     (extraWorkSnapshot?.total_price ?? 0);
   const sentAt = new Date();
   const expiresAt = new Date(sentAt.getTime() + settings.expiry_hours * 60 * 60 * 1000);
   const appUrl = resolvePublicAppUrl();
-  const publicSlug = buildOfferSlug(body.workOrderId, sentAt);
-  // Fetch ticket and resolve the best available comment author
-  // Strategy (same as Booking project): Planlægningen > mechanic BD user > ticket assignee > API user
-  let ticket;
-  try {
-    ticket = await getTicket(body.ticketId);
-  } catch (err) {
-    console.warn('[offer/send] getTicket failed early', err);
-  }
+  const publicSlug = buildOfferSlug(workOrderId, sentAt);
 
+  // Strategy (same as Booking project): Planlægningen > mechanic BD user > ticket assignee > API user
   let commentUserId: number | null = null;
   try {
     const planner = await findPlannerUser();
@@ -138,18 +190,21 @@ export async function POST(req: Request) {
     console.warn('[offer/send] Could not find Planlægningen user', err);
   }
   if (!commentUserId) commentUserId = body.mechanicBikedeskUserId ?? null;
-  if (!commentUserId) commentUserId = (ticket as Record<string, unknown> | undefined)?.assignee as number | null ?? null;
+  if (!commentUserId) commentUserId = ticket.assignee ?? null;
   if (!commentUserId) {
-    try { commentUserId = getBikedeskApiUserId(); } catch { /* no-op */ }
+    try {
+      commentUserId = getBikedeskApiUserId();
+    } catch {
+      // no-op
+    }
   }
   console.log('[offer/send] commentUserId resolved to:', commentUserId);
 
-  // Create offer row (token auto-generated by DB)
   const { data: offer, error: offerError } = await supabase
     .from('offers')
     .insert({
       sent_at: sentAt.toISOString(),
-      work_order_id: body.workOrderId,
+      work_order_id: workOrderId,
       public_slug: publicSlug,
       mechanic_id: body.mechanicId,
       mechanic_name: body.mechanicName,
@@ -164,7 +219,7 @@ export async function POST(req: Request) {
       images_snapshot: [],
       total_amount: totalAmount,
     })
-    .select('id, token, public_slug')
+    .select('id, public_slug')
     .single();
 
   if (offerError || !offer) {
@@ -172,13 +227,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: 'Kunne ikke gemme tilbud' }, { status: 500 });
   }
 
-  // Build and send SMS via BikeDesk
+  if (!offer.public_slug) {
+    console.error('[offer/send] Offer created without public_slug', offer.id);
+    return NextResponse.json({ success: false, error: 'Tilbud mangler offentligt link' }, { status: 500 });
+  }
+
   const smsText = buildOfferSmsText({
     customerName: body.customerName,
-    workOrderId: body.workOrderId,
+    workOrderId,
     expiresAt,
     appUrl,
-    identifier: offer.public_slug ?? offer.token,
+    publicSlug: offer.public_slug,
     smsTemplate: settings.sms_template,
   });
 
@@ -192,16 +251,13 @@ export async function POST(req: Request) {
     smsBatchId = smsResult.batchid;
   } catch (err) {
     console.error('[offer/send] SMS failed', err);
-    // Don't fail the offer creation — log the error but continue
+    // Do not fail the offer creation - log the error but continue.
   }
 
-  // Log SMS as BikeDesk comment — only smslogid needed, no extra comment text
   if (smsBatchId && commentUserId) {
     try {
-      // Wait briefly for BikeDesk to process the batch
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // Resolve the individual SMS log entry id from the batch
       let smsLogId: number | undefined;
       try {
         const batch = await getSmsLogBatch(smsBatchId);
@@ -224,8 +280,7 @@ export async function POST(req: Request) {
     console.warn('[offer/send] Skipping comment: smsBatchId=', smsBatchId, 'commentUserId=', commentUserId);
   }
 
-  // Update ticket tags (tags_on_sent)
-  if (settings.tags_on_sent.length > 0 && ticket) {
+  if (settings.tags_on_sent.length > 0) {
     try {
       await updateTicketTags(body.ticketId, ticket, settings.tags_on_sent, []);
     } catch (err) {
@@ -233,7 +288,6 @@ export async function POST(req: Request) {
     }
   }
 
-  // Update offer with batch id
   if (smsBatchId) {
     await supabase
       .from('offers')

@@ -1,12 +1,37 @@
 import type { OfferTemplateSnapshot } from '@/types';
-import { buildOfferPath } from './offer-link';
+import { buildPublicOfferUrl } from './offer-link';
+
+export const DEFAULT_SMS_TEMPLATE = [
+  'Hej {customerName},',
+  '',
+  'Vi har lavet et tilbud til dig på din cykel (sag {workOrderId}).',
+  '',
+  'Se og godkend tilbuddet her:',
+  '{offerLink}',
+  '',
+  'Tilbuddet udløber {expiry}.',
+  '',
+  'Mvh B-Bikes',
+].join('\n');
+
+const OFFER_LINK_PLACEHOLDER = '{offerLink}';
+
+export function validateSmsTemplate(smsTemplate?: string): string | null {
+  const trimmed = smsTemplate?.trim() ?? '';
+
+  if (!trimmed || trimmed.includes(OFFER_LINK_PLACEHOLDER)) {
+    return null;
+  }
+
+  return `SMS-skabelonen skal indeholde ${OFFER_LINK_PLACEHOLDER}`;
+}
 
 export function buildOfferSmsText(opts: {
   customerName: string;
   workOrderId: string;
   expiresAt: Date;
   appUrl: string;
-  identifier: string;
+  publicSlug: string;
   smsTemplate?: string;
 }): string {
   const expiry = opts.expiresAt.toLocaleString('da-DK', {
@@ -16,20 +41,8 @@ export function buildOfferSmsText(opts: {
     minute: '2-digit',
   });
 
-  const offerLink = `${opts.appUrl.replace(/\/$/, '')}${buildOfferPath(opts.identifier)}`;
-
-  const template = opts.smsTemplate?.trim() || [
-    'Hej {customerName},',
-    '',
-    'Vi har lavet et tilbud til dig på din cykel (sag {workOrderId}).',
-    '',
-    'Se og godkend tilbuddet her:',
-    '{offerLink}',
-    '',
-    'Tilbuddet udløber {expiry}.',
-    '',
-    'Mvh B-Bikes',
-  ].join('\n');
+  const offerLink = buildPublicOfferUrl(opts.publicSlug, opts.appUrl);
+  const template = opts.smsTemplate?.trim() || DEFAULT_SMS_TEMPLATE;
 
   const replacements: Record<string, string> = {
     customerName: opts.customerName,
@@ -62,10 +75,10 @@ export function buildOfferDetailsCommentText(opts: {
     '',
     ...opts.templates.map((template) => {
       const icon = template.marker === 'red' || template.marker === 'yellow' ? '▲' : '●';
-      return `${icon} ${template.title}${template.price > 0 ? ` — ${template.price} kr.` : ''}`;
+      return `${icon} ${template.title}${template.price > 0 ? ` - ${template.price} kr.` : ''}`;
     }),
     '',
     `Total: ${totalAmount} kr.`,
-    `Udløber: ${opts.expiresAt.toLocaleString('da-DK')}`
+    `Udløber: ${opts.expiresAt.toLocaleString('da-DK')}`,
   ].join('\n');
 }

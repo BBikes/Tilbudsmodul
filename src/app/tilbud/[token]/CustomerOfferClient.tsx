@@ -39,14 +39,14 @@ export default function CustomerOfferClient({ offer, contactPhone, contactEmail 
 function OfferView({ offer }: { offer: Offer }) {
   const sortedTemplates = useMemo(() => {
     return [...offer.templates_snapshot].sort(
-      (left, right) => MARKER_ORDER.indexOf(left.marker) - MARKER_ORDER.indexOf(right.marker)
+      (left, right) => MARKER_ORDER.indexOf(left.marker) - MARKER_ORDER.indexOf(right.marker),
     );
   }, [offer.templates_snapshot]);
 
   const defaultSelected = new Set(
     sortedTemplates
       .filter((template) => template.marker === 'red' || template.marker === 'yellow')
-      .map((template) => template.id)
+      .map((template) => template.id),
   );
 
   const extraWorkItem = offer.extra_work_item_snapshot;
@@ -95,7 +95,7 @@ function OfferView({ offer }: { offer: Offer }) {
           : !!extraWorkItem && extraWorkChecked;
 
     if (action === 'accept_selected' && acceptedIds.length === 0 && !extraWorkItemAccepted) {
-      setError('Vaelg mindst en linje');
+      setError('Vælg mindst en linje');
       return;
     }
 
@@ -127,8 +127,12 @@ function OfferView({ offer }: { offer: Offer }) {
   if (done) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="text-center max-w-xs">
-          <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5 ${doneType === 'accepted' ? 'bg-green-100' : 'bg-gray-100'}`}>
+        <div className="max-w-xs text-center">
+          <div
+            className={`mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full ${
+              doneType === 'accepted' ? 'bg-green-100' : 'bg-gray-100'
+            }`}
+          >
             {doneType === 'accepted' ? (
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
                 <path d="M5 13l4 4L19 7" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -139,13 +143,13 @@ function OfferView({ offer }: { offer: Offer }) {
               </svg>
             )}
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
+          <h2 className="mb-2 text-xl font-bold text-gray-900">
             {doneType === 'accepted' ? 'Tak for din accept' : 'Tilbud afvist'}
           </h2>
           <p className="text-sm text-gray-500">
             {doneType === 'accepted'
-              ? 'Vi er i gang med din cykel. Du hoerer fra os snarest.'
-              : 'Vi har registreret dit svar. Kontakt os gerne, hvis du har spoergsmaal.'}
+              ? 'Vi er i gang med din cykel. Du hører fra os snarest.'
+              : 'Vi har registreret dit svar. Kontakt os gerne, hvis du har spørgsmål.'}
           </p>
         </div>
       </div>
@@ -162,8 +166,8 @@ function OfferView({ offer }: { offer: Offer }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-100 px-4">
-        <div className="max-w-lg mx-auto flex items-center h-14">
+      <header className="border-b border-gray-100 bg-white px-4">
+        <div className="mx-auto flex h-14 max-w-lg items-center">
           <Image
             src="https://b-bikes.dk/wp-content/uploads/Logo-Wide.svg"
             alt="B-Bikes"
@@ -175,21 +179,19 @@ function OfferView({ offer }: { offer: Offer }) {
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 py-6 space-y-5 pb-32">
+      <main className="mx-auto max-w-lg space-y-5 px-4 py-6 pb-32">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Tilbud paa ekstraarbejde</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-xl font-bold text-gray-900">Tilbud på ekstraarbejde</h1>
+          <p className="mt-1 text-sm text-gray-500">
             Sag #{offer.work_order_id}
             {offer.customer_name ? ` · ${offer.customer_name}` : ''}
           </p>
-          <p className="text-xs text-gray-400 mt-1">Tilbuddet udloeber {expiryStr}</p>
+          <p className="mt-1 text-xs text-gray-400">Tilbuddet udløber {expiryStr}</p>
         </div>
 
-        {error && (
-          <div className="bg-red-50 text-red-600 text-sm rounded-xl p-3">{error}</div>
-        )}
+        {error && <div className="rounded-xl bg-red-50 p-3 text-sm text-red-600">{error}</div>}
 
-        <div className="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-50">
+        <div className="divide-y divide-gray-50 rounded-2xl border border-gray-100 bg-white">
           {sortedTemplates.map((template) => (
             <TemplateRow
               key={template.id}
@@ -209,26 +211,26 @@ function OfferView({ offer }: { offer: Offer }) {
         </div>
 
         {hasImages && (
-          <button className="text-sm text-gray-600 font-medium border border-gray-200 rounded-xl px-4 py-2.5 hover:bg-gray-50 w-full">
+          <button className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50">
             Se billeder ({offer.images_snapshot.length})
           </button>
         )}
 
         {selectedTotal > 0 && (
-          <div className="bg-white rounded-xl border border-gray-100 px-5 py-3 flex justify-between items-center">
+          <div className="flex items-center justify-between rounded-xl border border-gray-100 bg-white px-5 py-3">
             <span className="text-sm text-gray-600">Valgt total</span>
             <span className="font-bold text-gray-900">{formatPrice(selectedTotal)}</span>
           </div>
         )}
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-4">
-        <div className="max-w-lg mx-auto space-y-2">
+      <div className="fixed bottom-0 left-0 right-0 border-t border-gray-100 bg-white px-4 py-4">
+        <div className="mx-auto max-w-lg space-y-2">
           <div className="flex gap-2">
             <button
               onClick={() => respond('accept_selected')}
               disabled={!hasAnySelection || loading !== null}
-              className="flex-1 py-3 border-2 border-green-600 text-green-700 rounded-xl font-medium text-sm hover:bg-green-50 disabled:opacity-40 flex items-center justify-center gap-1.5"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border-2 border-green-600 py-3 text-sm font-medium text-green-700 hover:bg-green-50 disabled:opacity-40"
             >
               {loading === 'accept_selected' && <Loader2 size={14} className="animate-spin" />}
               Accepter valgte
@@ -236,7 +238,7 @@ function OfferView({ offer }: { offer: Offer }) {
             <button
               onClick={() => respond('accept_all')}
               disabled={loading !== null}
-              className="flex-1 py-3 bg-green-600 text-white rounded-xl font-medium text-sm hover:bg-green-700 disabled:opacity-40 flex items-center justify-center gap-1.5"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-green-600 py-3 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-40"
             >
               {loading === 'accept_all' && <Loader2 size={14} className="animate-spin" />}
               Accepter alle
@@ -245,7 +247,7 @@ function OfferView({ offer }: { offer: Offer }) {
           <button
             onClick={() => respond('reject')}
             disabled={loading !== null}
-            className="w-full py-3 bg-red-600 text-white rounded-xl font-medium text-sm hover:bg-red-700 disabled:opacity-40 flex items-center justify-center gap-1.5"
+            className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-red-600 py-3 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-40"
           >
             {loading === 'reject' && <Loader2 size={14} className="animate-spin" />}
             Afvis tilbud
@@ -267,12 +269,12 @@ function TemplateRow({
 }) {
   return (
     <div
-      className={`flex items-center gap-3 px-5 py-4 cursor-pointer transition-colors ${checked ? 'bg-white' : 'bg-gray-50/50'}`}
+      className={`flex cursor-pointer items-center gap-3 px-5 py-4 transition-colors ${checked ? 'bg-white' : 'bg-gray-50/50'}`}
       onClick={onToggle}
     >
       <div
-        className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-          checked ? 'bg-gray-900 border-gray-900' : 'border-gray-300'
+        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors ${
+          checked ? 'border-gray-900 bg-gray-900' : 'border-gray-300'
         }`}
       >
         {checked && (
@@ -282,17 +284,15 @@ function TemplateRow({
         )}
       </div>
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
+      <div className="min-w-0 flex-1">
+        <div className="mb-1 flex items-center gap-2">
           <MarkerBadge marker={template.marker} />
         </div>
-        <p className={`text-sm font-medium ${checked ? 'text-gray-900' : 'text-gray-500'}`}>
-          {template.title}
-        </p>
+        <p className={`text-sm font-medium ${checked ? 'text-gray-900' : 'text-gray-500'}`}>{template.title}</p>
       </div>
 
-      <span className="text-sm font-medium text-gray-700 flex-shrink-0">
-        {template.price > 0 ? formatPrice(template.price) : '—'}
+      <span className="shrink-0 text-sm font-medium text-gray-700">
+        {template.price > 0 ? formatPrice(template.price) : '-'}
       </span>
     </div>
   );
@@ -309,12 +309,12 @@ function ExtraWorkRow({
 }) {
   return (
     <div
-      className={`flex items-center gap-3 px-5 py-4 cursor-pointer transition-colors ${checked ? 'bg-white' : 'bg-gray-50/50'}`}
+      className={`flex cursor-pointer items-center gap-3 px-5 py-4 transition-colors ${checked ? 'bg-white' : 'bg-gray-50/50'}`}
       onClick={onToggle}
     >
       <div
-        className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-          checked ? 'bg-gray-900 border-gray-900' : 'border-gray-300'
+        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors ${
+          checked ? 'border-gray-900 bg-gray-900' : 'border-gray-300'
         }`}
       >
         {checked && (
@@ -324,21 +324,17 @@ function ExtraWorkRow({
         )}
       </div>
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
+      <div className="min-w-0 flex-1">
+        <div className="mb-1 flex items-center gap-2">
           <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600">
             BB15
           </span>
           <span className="text-xs text-gray-400">{extraWorkItem.bb15_quantity} x 15 minutter</span>
         </div>
-        <p className={`text-sm font-medium ${checked ? 'text-gray-900' : 'text-gray-500'}`}>
-          {extraWorkItem.title}
-        </p>
+        <p className={`text-sm font-medium ${checked ? 'text-gray-900' : 'text-gray-500'}`}>{extraWorkItem.title}</p>
       </div>
 
-      <span className="text-sm font-medium text-gray-700 flex-shrink-0">
-        {formatPrice(extraWorkItem.total_price)}
-      </span>
+      <span className="shrink-0 text-sm font-medium text-gray-700">{formatPrice(extraWorkItem.total_price)}</span>
     </div>
   );
 }
@@ -346,8 +342,8 @@ function ExtraWorkRow({
 function ExpiredPage({ phone, email }: { phone: string; email: string }) {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-white border-b border-gray-100 px-4">
-        <div className="max-w-lg mx-auto flex items-center h-14">
+      <header className="border-b border-gray-100 bg-white px-4">
+        <div className="mx-auto flex h-14 max-w-lg items-center">
           <Image
             src="https://b-bikes.dk/wp-content/uploads/Logo-Wide.svg"
             alt="B-Bikes"
@@ -358,18 +354,16 @@ function ExpiredPage({ phone, email }: { phone: string; email: string }) {
           />
         </div>
       </header>
-      <div className="flex-1 flex items-center justify-center px-4">
-        <div className="text-center max-w-xs">
-          <p className="text-4xl mb-4">⏱</p>
-          <h1 className="text-lg font-bold text-gray-900 mb-2">Tilbuddet er udloebet</h1>
-          <p className="text-sm text-gray-500 mb-6">
-            Kontakt os, hvis du stadig oensker at faa udfoert arbejdet.
-          </p>
+      <div className="flex flex-1 items-center justify-center px-4">
+        <div className="max-w-xs text-center">
+          <p className="mb-4 text-4xl">⏱</p>
+          <h1 className="mb-2 text-lg font-bold text-gray-900">Tilbuddet er udløbet</h1>
+          <p className="mb-6 text-sm text-gray-500">Kontakt os, hvis du stadig ønsker at få udført arbejdet.</p>
           <div className="space-y-2">
             {phone && (
               <a
                 href={`tel:${phone}`}
-                className="flex items-center justify-center gap-2 py-3 border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50"
+                className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 py-3 text-sm text-gray-700 hover:bg-gray-50"
               >
                 <Phone size={14} />
                 {phone}
@@ -378,7 +372,7 @@ function ExpiredPage({ phone, email }: { phone: string; email: string }) {
             {email && (
               <a
                 href={`mailto:${email}`}
-                className="flex items-center justify-center gap-2 py-3 border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50"
+                className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 py-3 text-sm text-gray-700 hover:bg-gray-50"
               >
                 <Mail size={14} />
                 {email}
@@ -399,10 +393,10 @@ function AlreadyRespondedPage({ status }: { status: string }) {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="text-center max-w-xs">
-        <p className="text-4xl mb-4">✓</p>
-        <h1 className="text-lg font-bold text-gray-900 mb-2">{label}</h1>
-        <p className="text-sm text-gray-500">Kontakt os, hvis du har spoergsmaal.</p>
+      <div className="max-w-xs text-center">
+        <p className="mb-4 text-4xl">✓</p>
+        <h1 className="mb-2 text-lg font-bold text-gray-900">{label}</h1>
+        <p className="text-sm text-gray-500">Kontakt os, hvis du har spørgsmål.</p>
       </div>
     </div>
   );

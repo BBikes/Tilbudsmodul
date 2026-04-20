@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { validateSmsTemplate } from '@/lib/offer-sms';
 import type { OfferSettings } from '@/types';
 
 async function requireAdmin() {
@@ -27,6 +28,11 @@ export async function POST(req: Request) {
   }
 
   const settings: OfferSettings = await req.json();
+  const smsTemplateError = validateSmsTemplate(settings.sms_template);
+  if (smsTemplateError) {
+    return NextResponse.json({ success: false, error: smsTemplateError }, { status: 400 });
+  }
+
   const supabase = await createServiceClient();
 
   await supabase.from('system_settings').upsert({

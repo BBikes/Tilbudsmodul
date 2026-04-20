@@ -1,24 +1,32 @@
 import { NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
-import { createTicketComment, sendSms, findTicketByWorkOrderNumber, findPlannerUser, getSmsLogBatch } from '@/lib/bikedesk';
+import {
+  createTicketComment,
+  findPlannerUser,
+  findTicketByWorkOrderNumber,
+  getSmsLogBatch,
+  sendSms,
+} from '@/lib/bikedesk';
 import { getBikedeskApiUserId } from '@/lib/bikedesk-config';
 import { buildOfferSlug, resolvePublicAppUrl } from '@/lib/offer-link';
-import { buildOfferSmsText } from '@/lib/offer-sms';
+import { buildOfferSmsText, validateSmsTemplate } from '@/lib/offer-sms';
 import type { OfferSettings } from '@/types';
 import { DEFAULT_OFFER_SETTINGS } from '@/types';
 
 async function requireAdmin() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return null;
-  const allowed = (process.env.ADMIN_EMAILS ?? '').split(',').map((e) => e.trim()).filter(Boolean);
+  const allowed = (process.env.ADMIN_EMAILS ?? '').split(',').map((email) => email.trim()).filter(Boolean);
   if (allowed.length > 0 && !allowed.includes(user.email ?? '')) return null;
   return user;
 }
 
 export async function POST(
   _req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   if (!(await requireAdmin())) {
     return NextResponse.json({ success: false, error: 'Ikke autoriseret' }, { status: 401 });
@@ -33,10 +41,18 @@ export async function POST(
   }
 
   const { data: settingsRow } = await supabase
-    .from('system_settings').select('value').eq('key', 'offer_settings').single();
+    .from('system_settings')
+    .select('value')
+    .eq('key', 'offer_settings')
+    .single();
   const settings: OfferSettings = settingsRow?.value
     ? { ...DEFAULT_OFFER_SETTINGS, ...(settingsRow.value as Partial<OfferSettings>) }
     : DEFAULT_OFFER_SETTINGS;
+  const smsTemplateError = validateSmsTemplate(settings.sms_template);
+
+  if (smsTemplateError) {
+    return NextResponse.json({ success: false, error: smsTemplateError }, { status: 500 });
+  }
 
   const sentAt = new Date();
   const expiresAt = new Date(sentAt.getTime() + settings.expiry_hours * 60 * 60 * 1000);
@@ -60,11 +76,14 @@ export async function POST(
   }
   if (!commentUserId) commentUserId = ticket?.assignee ?? null;
   if (!commentUserId) {
-    try { commentUserId = getBikedeskApiUserId(); } catch { /* no-op */ }
+    try {
+      commentUserId = getBikedeskApiUserId();
+    } catch {
+      // no-op
+    }
   }
   console.log('[resend] commentUserId resolved to:', commentUserId);
 
-  // Create new offer row (new token)
   const { data: newOffer } = await supabase
     .from('offers')
     .insert({
@@ -85,14 +104,18 @@ export async function POST(
       total_amount: original.total_amount,
       resend_of: original.id,
     })
-    .select('id, token, public_slug')
+    .select('id, public_slug')
     .single();
 
   if (!newOffer) {
     return NextResponse.json({ success: false, error: 'Kunne ikke oprette nyt tilbud' }, { status: 500 });
   }
 
-  // Send new SMS
+  if (!newOffer.public_slug) {
+    console.error('[resend] Offer created without public_slug', newOffer.id);
+    return NextResponse.json({ success: false, error: 'Tilbud mangler offentligt link' }, { status: 500 });
+  }
+
   if (original.customer_phone) {
     try {
       const smsText = buildOfferSmsText({
@@ -100,7 +123,7 @@ export async function POST(
         workOrderId: original.work_order_id,
         expiresAt,
         appUrl,
-        identifier: newOffer.public_slug ?? newOffer.token,
+        publicSlug: newOffer.public_slug,
         smsTemplate: settings.sms_template,
       });
 
@@ -113,7 +136,6 @@ export async function POST(
       if (smsResult.batchid) {
         if (commentUserId && ticket) {
           try {
-            // Wait briefly for BikeDesk to process the batch
             await new Promise((resolve) => setTimeout(resolve, 1000));
 
             let smsLogId: number | undefined;
@@ -124,7 +146,6 @@ export async function POST(
               console.warn('[resend] Could not resolve smsLogId from batch', err);
             }
 
-            // Only link the SMS log entry — BikeDesk renders the SMS natively
             await createTicketComment({
               ticketId: ticket.id,
               smsLogId: smsLogId ?? smsResult.batchid,
