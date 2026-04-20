@@ -34,6 +34,12 @@ Inserts default `offer_settings` row into the existing `system_settings` table.
 ### 007_cleanup_expired_sessions.sql
 Daily cleanup of expired mechanic sessions.
 
+### 008_add_offer_public_slug.sql
+Adds the readable `public_slug` used for public offer links.
+
+### 009_add_offer_extra_work_item.sql
+Adds `extra_work_item_snapshot` for the optional BB15-based extra line.
+
 ---
 
 ## STEP 2 — Enable extensions (if not already enabled)
@@ -63,7 +69,7 @@ select cron.schedule(
 ```
 
 Replace:
-- `YOUR_TILBUDSMODUL_URL` with the deployed URL (e.g. `tilbudsmodul.vercel.app`)
+- `YOUR_TILBUDSMODUL_URL` with the deployed URL (e.g. `tilbud.b-bikes.dk`)
 - `YOUR_CRON_SECRET` with the value of `CRON_SECRET` in `.env.local`
 
 ---
@@ -91,7 +97,8 @@ SUPABASE_SERVICE_ROLE_KEY=<same as Booking>
 BIKEDESK_API_URL=https://app.bikedesk.dk/api/v1
 BIKEDESK_API_KEY=<same as Booking>
 `BIKEDESK_API_USER_ID=<BikeDesk user id for API comments>`
-NEXT_PUBLIC_APP_URL=https://YOUR_TILBUDSMODUL_URL
+NEXT_PUBLIC_APP_URL=https://tilbud.b-bikes.dk
+APP_URL=https://tilbud.b-bikes.dk
 ADMIN_EMAILS=service@b-bikes.dk
 CRON_SECRET=<generate a strong random secret>
 ```

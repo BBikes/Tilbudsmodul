@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { Offer, OfferStatus } from '@/types';
-import { buildOfferPath, getOfferIdentifier } from '@/lib/offer-link';
+import { buildPublicOfferUrl, getOfferIdentifier } from '@/lib/offer-link';
 import { Loader2, ExternalLink, RefreshCw } from 'lucide-react';
 
 const STATUS_LABELS: Record<OfferStatus, string> = {
@@ -120,7 +120,7 @@ export default function OffersClient({ offers }: { offers: Offer[] }) {
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
                         <a
-                          href={buildOfferPath(getOfferIdentifier(offer))}
+                          href={buildPublicOfferUrl(getOfferIdentifier(offer))}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100"

@@ -1,7 +1,9 @@
 import { getBikedeskAuthHeaders, getBikedeskBaseUrl } from './bikedesk-config';
 import type {
   BikedeskCustomer,
+  BikedeskProduct,
   BikedeskTicket,
+  BikedeskTicketMaterial,
   BikedeskTicketTemplate,
   BikedeskTicketTemplateMaterial,
   BikedeskTicketTemplateGroup,
@@ -17,6 +19,154 @@ function unwrapResponse<T>(payload: WrappedResponse<T>): T {
     return (payload as { content?: T }).content as T;
   }
   return payload as T;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function getNestedValue(record: Record<string, unknown>, path: string[]): unknown {
+  let current: unknown = record;
+
+  for (const segment of path) {
+    const currentRecord = asRecord(current);
+    if (!currentRecord) {
+      return undefined;
+    }
+    current = currentRecord[segment];
+  }
+
+  return current;
+}
+
+function firstDefinedValue(record: Record<string, unknown>, paths: string[][]): unknown {
+  for (const path of paths) {
+    const value = getNestedValue(record, path);
+    if (value !== undefined && value !== null && value !== '') {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+function toFiniteNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number.parseFloat(value.replace(',', '.').trim());
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function toInteger(value: unknown): number | null {
+  const parsed = toFiniteNumber(value);
+  return parsed === null ? null : Math.trunc(parsed);
+}
+
+function toTrimmedString(value: unknown): string | null {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value);
+  }
+
+  return null;
+}
+
+function extractObjectArray(payload: unknown): Record<string, unknown>[] {
+  const unwrapped = unwrapResponse(payload as WrappedResponse<unknown>);
+
+  if (Array.isArray(unwrapped)) {
+    return unwrapped.filter((entry): entry is Record<string, unknown> => asRecord(entry) !== null);
+  }
+
+  const record = asRecord(unwrapped);
+  if (!record) {
+    return [];
+  }
+
+  const candidate = firstDefinedValue(record, [['content'], ['data'], ['items'], ['results']]);
+  if (Array.isArray(candidate)) {
+    return candidate.filter((entry): entry is Record<string, unknown> => asRecord(entry) !== null);
+  }
+
+  return [];
+}
+
+function normalizeProductRecord(raw: Record<string, unknown>): BikedeskProduct | null {
+  const id = toInteger(firstDefinedValue(raw, [['id'], ['productid']]));
+  const title = toTrimmedString(
+    firstDefinedValue(raw, [['title'], ['name'], ['label'], ['product', 'title'], ['product', 'name']])
+  );
+  const productno = toTrimmedString(firstDefinedValue(raw, [['productno'], ['product_no'], ['itemno'], ['article_no']]));
+  const price = toFiniteNumber(
+    firstDefinedValue(raw, [
+      ['price'],
+      ['salesprice'],
+      ['sales_price'],
+      ['outprice'],
+      ['salepricewithvat'],
+      ['sale_price_with_vat'],
+      ['recommendedretailprice'],
+      ['recommended_retail_price'],
+    ])
+  );
+
+  if (id === null || !title || !productno || price === null) {
+    return null;
+  }
+
+  return {
+    id,
+    title,
+    productno,
+    price,
+    pricewithoutvat: toFiniteNumber(firstDefinedValue(raw, [['pricewithoutvat'], ['price_without_vat']])),
+    barcode: toTrimmedString(firstDefinedValue(raw, [['barcode']])),
+    recommendedretailprice: toFiniteNumber(firstDefinedValue(raw, [['recommendedretailprice'], ['recommended_retail_price']])),
+  };
+}
+
+function normalizeTicketMaterialRecord(raw: Record<string, unknown>): BikedeskTicketMaterial | null {
+  const id = toInteger(firstDefinedValue(raw, [['id'], ['ticketmaterialid'], ['taskmaterialid']]));
+  const amount = toFiniteNumber(firstDefinedValue(raw, [['amount'], ['quantity'], ['qty']]));
+
+  if (id === null || amount === null) {
+    return null;
+  }
+
+  return {
+    id,
+    taskid: toInteger(firstDefinedValue(raw, [['taskid'], ['ticketid'], ['ticket', 'id'], ['task', 'id']])) ?? undefined,
+    ticketid: toInteger(firstDefinedValue(raw, [['ticketid'], ['taskid'], ['ticket', 'id'], ['task', 'id']])) ?? undefined,
+    productid: toInteger(firstDefinedValue(raw, [['productid'], ['product', 'id']])) ?? undefined,
+    productno: toTrimmedString(
+      firstDefinedValue(raw, [
+        ['productno'],
+        ['product_no'],
+        ['itemno'],
+        ['article_no'],
+        ['product', 'productno'],
+        ['product', 'product_no'],
+      ])
+    ) ?? undefined,
+    title: toTrimmedString(firstDefinedValue(raw, [['title'], ['product', 'title'], ['product', 'name']])) ?? undefined,
+    amount,
+    price: toFiniteNumber(firstDefinedValue(raw, [['price'], ['salesprice'], ['total_incl_vat'], ['totalinclvat']])),
+    amountpaid: toFiniteNumber(firstDefinedValue(raw, [['amountpaid'], ['amount_paid']])) ?? undefined,
+    product: asRecord(firstDefinedValue(raw, [['product']])) as Partial<BikedeskProduct> | null,
+    raw,
+  };
 }
 
 async function bdFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -114,6 +264,104 @@ export async function attachTemplateToTicket(ticketId: number, templateId: numbe
   await bdFetch<unknown>(`/ticket/${ticketId}/templates`, {
     method: 'POST',
     body: JSON.stringify({ content: { templateid: templateId } }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Products / Ticket materials
+// ---------------------------------------------------------------------------
+
+async function listProducts(path: string): Promise<BikedeskProduct[]> {
+  const payload = await bdFetchRaw<unknown>(path);
+  return extractObjectArray(payload)
+    .map((entry) => normalizeProductRecord(entry))
+    .filter((product): product is BikedeskProduct => product !== null);
+}
+
+export async function findProductByCode(productCode: string): Promise<BikedeskProduct | null> {
+  const normalizedCode = normalizeSearchValue(productCode);
+  const encoded = encodeURIComponent(productCode.trim());
+  const attempts = [
+    `/products?productno=${encoded}&paginationPageLength=25`,
+    `/products?freetext=${encoded}&paginationPageLength=25`,
+    `/products?search=${encoded}&paginationPageLength=25`,
+  ];
+
+  const seen = new Set<number>();
+  const candidates: BikedeskProduct[] = [];
+
+  for (const path of attempts) {
+    try {
+      const products = await listProducts(path);
+      for (const product of products) {
+        if (seen.has(product.id)) continue;
+        seen.add(product.id);
+        candidates.push(product);
+      }
+    } catch {
+      // Try next query strategy.
+    }
+  }
+
+  return (
+    candidates.find((product) => normalizeSearchValue(product.productno) === normalizedCode) ??
+    candidates.find((product) => normalizeSearchValue(product.title).includes(normalizedCode)) ??
+    null
+  );
+}
+
+export async function getTicketMaterials(ticketId: number): Promise<BikedeskTicketMaterial[]> {
+  const payload = await bdFetchRaw<unknown>(
+    `/tickets/materials?paginationPageLength=1000&withamountpaid=1&ticketid=${ticketId}`
+  );
+
+  return extractObjectArray(payload)
+    .map((entry) => normalizeTicketMaterialRecord(entry))
+    .filter((material): material is BikedeskTicketMaterial => material !== null);
+}
+
+type UpsertTicketMaterialInput = {
+  ticketId: number;
+  productId: number;
+  productCode: string;
+  title: string;
+  amount: number;
+  price?: number | null;
+};
+
+function buildTicketMaterialPayload(input: UpsertTicketMaterialInput) {
+  return {
+    content: {
+      taskid: input.ticketId,
+      ticketid: input.ticketId,
+      productid: input.productId,
+      productno: input.productCode,
+      title: input.title,
+      amount: input.amount,
+      quantity: input.amount,
+      ...(input.price !== undefined && input.price !== null ? { price: input.price } : {}),
+    },
+  };
+}
+
+export async function upsertTicketMaterial(input: UpsertTicketMaterialInput): Promise<void> {
+  const normalizedCode = normalizeSearchValue(input.productCode);
+  const existing = (await getTicketMaterials(input.ticketId)).find((material) => {
+    const materialCode = material.productno ? normalizeSearchValue(material.productno) : null;
+    return material.productid === input.productId || materialCode === normalizedCode;
+  });
+
+  if (existing) {
+    await bdFetch<unknown>(`/tickets/materials/${existing.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(buildTicketMaterialPayload(input)),
+    });
+    return;
+  }
+
+  await bdFetch<unknown>('/tickets/materials', {
+    method: 'POST',
+    body: JSON.stringify(buildTicketMaterialPayload(input)),
   });
 }
 

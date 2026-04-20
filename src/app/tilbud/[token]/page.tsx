@@ -4,11 +4,19 @@ import { DEFAULT_OFFER_SETTINGS } from '@/types';
 import CustomerOfferClient from './CustomerOfferClient';
 
 interface Props {
-  params: Promise<{ token: string }>;
+  params: Promise<Record<string, string>>;
 }
 
 export default async function TilbudPage({ params }: Props) {
-  const { token: identifier } = await params;
+  const resolvedParams = await params;
+  const identifier =
+    resolvedParams.token ??
+    resolvedParams.identifier ??
+    Object.values(resolvedParams)[0];
+
+  if (!identifier) {
+    return <NotFound />;
+  }
 
   const supabase = await createServiceClient();
 

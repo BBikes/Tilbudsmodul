@@ -1,10 +1,12 @@
 import { redirect } from 'next/navigation';
 import { validateMechanicSession } from '@/lib/session';
-import { findTicketByWorkOrderNumber, getCustomer, getTicketTemplateGroups } from '@/lib/bikedesk';
+import { findProductByCode, findTicketByWorkOrderNumber, getCustomer, getTicketTemplateGroups } from '@/lib/bikedesk';
 import { createServiceClient } from '@/lib/supabase/server';
 import type { OfferSettings, OfferTemplate } from '@/types';
 import { DEFAULT_OFFER_SETTINGS } from '@/types';
 import SendPageClient from './SendPageClient';
+
+const BB15_PRODUCT_CODE = 'BB15';
 
 interface Props {
   searchParams: Promise<{ workorder?: string }>;
@@ -61,6 +63,7 @@ export default async function SendPage({ searchParams }: Props) {
   }
 
   const { data: templates } = await templatesQuery;
+  const bb15Product = await findProductByCode(BB15_PRODUCT_CODE).catch(() => null);
 
   return (
     <SendPageClient
@@ -69,6 +72,7 @@ export default async function SendPage({ searchParams }: Props) {
       customer={customer}
       mechanic={{ id: mechanic.id, name: mechanic.name, bikedesk_user_id: mechanic.bikedesk_user_id }}
       templates={(templates ?? []) as OfferTemplate[]}
+      bb15UnitPrice={bb15Product?.price ?? null}
       expiryHours={settings.expiry_hours}
     />
   );

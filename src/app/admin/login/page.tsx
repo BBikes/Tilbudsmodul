@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import Link from 'next/link';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
@@ -78,9 +79,9 @@ export default function AdminLoginPage() {
         </form>
 
         <div className="mt-6 pt-5 border-t border-gray-100 text-center">
-          <a href="/login" className="text-xs text-gray-400 hover:text-gray-600">
+          <Link href="/login" className="text-xs text-gray-400 hover:text-gray-600">
             Mekaniker login
-          </a>
+          </Link>
         </div>
       </div>
     </div>

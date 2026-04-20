@@ -1,15 +1,19 @@
 'use client';
 
 import Image from 'next/image';
-import { useState, useMemo } from 'react';
-import type { Offer, OfferMarker, OfferTemplateSnapshot } from '@/types';
+import { useMemo, useState } from 'react';
+import type { Offer, OfferExtraWorkItemSnapshot, OfferMarker } from '@/types';
 import { MarkerBadge } from '@/components/offer/MarkerBadge';
-import { Loader2, Phone, Mail } from 'lucide-react';
+import { Loader2, Mail, Phone } from 'lucide-react';
 
 const MARKER_ORDER: OfferMarker[] = ['red', 'yellow', 'green'];
 
 function formatPrice(price: number) {
-  return new Intl.NumberFormat('da-DK', { style: 'currency', currency: 'DKK', maximumFractionDigits: 0 }).format(price);
+  return new Intl.NumberFormat('da-DK', {
+    style: 'currency',
+    currency: 'DKK',
+    maximumFractionDigits: 0,
+  }).format(price);
 }
 
 interface Props {
@@ -19,15 +23,12 @@ interface Props {
 }
 
 export default function CustomerOfferClient({ offer, contactPhone, contactEmail }: Props) {
-  // Check if expired
-  const isExpired =
-    offer.status === 'expired' || new Date(offer.expires_at) < new Date();
+  const isExpired = offer.status === 'expired' || new Date(offer.expires_at) < new Date();
 
   if (isExpired) {
     return <ExpiredPage phone={contactPhone} email={contactEmail} />;
   }
 
-  // Check if already responded
   if (['accepted', 'accepted_partial', 'rejected'].includes(offer.status)) {
     return <AlreadyRespondedPage status={offer.status} />;
   }
@@ -36,54 +37,75 @@ export default function CustomerOfferClient({ offer, contactPhone, contactEmail 
 }
 
 function OfferView({ offer }: { offer: Offer }) {
-  const sorted = useMemo(() => {
+  const sortedTemplates = useMemo(() => {
     return [...offer.templates_snapshot].sort(
-      (a, b) => MARKER_ORDER.indexOf(a.marker) - MARKER_ORDER.indexOf(b.marker)
+      (left, right) => MARKER_ORDER.indexOf(left.marker) - MARKER_ORDER.indexOf(right.marker)
     );
   }, [offer.templates_snapshot]);
 
-  // Default: red + yellow preselected, green unselected
   const defaultSelected = new Set(
-    sorted
-      .filter((t) => t.marker === 'red' || t.marker === 'yellow')
-      .map((t) => t.id)
+    sortedTemplates
+      .filter((template) => template.marker === 'red' || template.marker === 'yellow')
+      .map((template) => template.id)
   );
 
+  const extraWorkItem = offer.extra_work_item_snapshot;
   const [checkedIds, setCheckedIds] = useState<Set<number>>(defaultSelected);
+  const [extraWorkChecked, setExtraWorkChecked] = useState(!!extraWorkItem);
   const [loading, setLoading] = useState<'accept_selected' | 'accept_all' | 'reject' | null>(null);
   const [done, setDone] = useState(false);
   const [doneType, setDoneType] = useState<'accepted' | 'rejected' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const toggle = (id: number) => {
+  const toggleTemplate = (templateId: number) => {
     setCheckedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(templateId)) next.delete(templateId);
+      else next.add(templateId);
       return next;
     });
   };
 
-  const selectedTotal = sorted
-    .filter((t) => checkedIds.has(t.id))
-    .reduce((sum, t) => sum + t.price, 0);
+  const toggleExtraWorkItem = () => {
+    if (!extraWorkItem) return;
+    setExtraWorkChecked((prev) => !prev);
+  };
+
+  const selectedTotal =
+    sortedTemplates
+      .filter((template) => checkedIds.has(template.id))
+      .reduce((sum, template) => sum + template.price, 0) +
+    (extraWorkChecked && extraWorkItem ? extraWorkItem.total_price : 0);
+  const hasAnySelection = checkedIds.size > 0 || (extraWorkItem ? extraWorkChecked : false);
 
   const respond = async (action: 'accept_selected' | 'accept_all' | 'reject') => {
     setError(null);
-    setLoading(action);
 
     const acceptedIds =
       action === 'reject'
         ? []
         : action === 'accept_all'
-        ? sorted.map((t) => t.id)
-        : Array.from(checkedIds);
+          ? sortedTemplates.map((template) => template.id)
+          : Array.from(checkedIds);
+    const extraWorkItemAccepted =
+      action === 'reject'
+        ? false
+        : action === 'accept_all'
+          ? !!extraWorkItem
+          : !!extraWorkItem && extraWorkChecked;
+
+    if (action === 'accept_selected' && acceptedIds.length === 0 && !extraWorkItemAccepted) {
+      setError('Vaelg mindst en linje');
+      return;
+    }
+
+    setLoading(action);
 
     try {
       const res = await fetch(`/api/offer/${offer.id}/respond`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, acceptedIds }),
+        body: JSON.stringify({ action, acceptedIds, extraWorkItemAccepted }),
       });
 
       const data = await res.json();
@@ -122,8 +144,8 @@ function OfferView({ offer }: { offer: Offer }) {
           </h2>
           <p className="text-sm text-gray-500">
             {doneType === 'accepted'
-              ? 'Vi er i gang med din cykel. Du hører fra os snarest.'
-              : 'Vi har registreret dit svar. Kontakt os gerne, hvis du har spørgsmål.'}
+              ? 'Vi er i gang med din cykel. Du hoerer fra os snarest.'
+              : 'Vi har registreret dit svar. Kontakt os gerne, hvis du har spoergsmaal.'}
           </p>
         </div>
       </div>
@@ -140,7 +162,6 @@ function OfferView({ offer }: { offer: Offer }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white border-b border-gray-100 px-4">
         <div className="max-w-lg mx-auto flex items-center h-14">
           <Image
@@ -155,42 +176,44 @@ function OfferView({ offer }: { offer: Offer }) {
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-5 pb-32">
-        {/* Intro */}
         <div>
-          <h1 className="text-xl font-bold text-gray-900">
-            Tilbud på ekstraarbejde
-          </h1>
+          <h1 className="text-xl font-bold text-gray-900">Tilbud paa ekstraarbejde</h1>
           <p className="text-sm text-gray-500 mt-1">
             Sag #{offer.work_order_id}
             {offer.customer_name ? ` · ${offer.customer_name}` : ''}
           </p>
-          <p className="text-xs text-gray-400 mt-1">Tilbuddet udløber {expiryStr}</p>
+          <p className="text-xs text-gray-400 mt-1">Tilbuddet udloeber {expiryStr}</p>
         </div>
 
         {error && (
           <div className="bg-red-50 text-red-600 text-sm rounded-xl p-3">{error}</div>
         )}
 
-        {/* Template list */}
         <div className="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-50">
-          {sorted.map((t) => (
+          {sortedTemplates.map((template) => (
             <TemplateRow
-              key={t.id}
-              template={t}
-              checked={checkedIds.has(t.id)}
-              onToggle={() => toggle(t.id)}
+              key={template.id}
+              template={template}
+              checked={checkedIds.has(template.id)}
+              onToggle={() => toggleTemplate(template.id)}
             />
           ))}
+
+          {extraWorkItem && (
+            <ExtraWorkRow
+              extraWorkItem={extraWorkItem}
+              checked={extraWorkChecked}
+              onToggle={toggleExtraWorkItem}
+            />
+          )}
         </div>
 
-        {/* Images button */}
         {hasImages && (
           <button className="text-sm text-gray-600 font-medium border border-gray-200 rounded-xl px-4 py-2.5 hover:bg-gray-50 w-full">
             Se billeder ({offer.images_snapshot.length})
           </button>
         )}
 
-        {/* Total */}
         {selectedTotal > 0 && (
           <div className="bg-white rounded-xl border border-gray-100 px-5 py-3 flex justify-between items-center">
             <span className="text-sm text-gray-600">Valgt total</span>
@@ -199,13 +222,12 @@ function OfferView({ offer }: { offer: Offer }) {
         )}
       </main>
 
-      {/* Sticky action bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-4">
         <div className="max-w-lg mx-auto space-y-2">
           <div className="flex gap-2">
             <button
               onClick={() => respond('accept_selected')}
-              disabled={checkedIds.size === 0 || loading !== null}
+              disabled={!hasAnySelection || loading !== null}
               className="flex-1 py-3 border-2 border-green-600 text-green-700 rounded-xl font-medium text-sm hover:bg-green-50 disabled:opacity-40 flex items-center justify-center gap-1.5"
             >
               {loading === 'accept_selected' && <Loader2 size={14} className="animate-spin" />}
@@ -239,7 +261,7 @@ function TemplateRow({
   checked,
   onToggle,
 }: {
-  template: OfferTemplateSnapshot;
+  template: Offer['templates_snapshot'][number];
   checked: boolean;
   onToggle: () => void;
 }) {
@@ -248,7 +270,6 @@ function TemplateRow({
       className={`flex items-center gap-3 px-5 py-4 cursor-pointer transition-colors ${checked ? 'bg-white' : 'bg-gray-50/50'}`}
       onClick={onToggle}
     >
-      {/* Checkbox */}
       <div
         className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
           checked ? 'bg-gray-900 border-gray-900' : 'border-gray-300'
@@ -261,7 +282,6 @@ function TemplateRow({
         )}
       </div>
 
-      {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
           <MarkerBadge marker={template.marker} />
@@ -271,9 +291,53 @@ function TemplateRow({
         </p>
       </div>
 
-      {/* Price */}
       <span className="text-sm font-medium text-gray-700 flex-shrink-0">
         {template.price > 0 ? formatPrice(template.price) : '—'}
+      </span>
+    </div>
+  );
+}
+
+function ExtraWorkRow({
+  extraWorkItem,
+  checked,
+  onToggle,
+}: {
+  extraWorkItem: OfferExtraWorkItemSnapshot;
+  checked: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div
+      className={`flex items-center gap-3 px-5 py-4 cursor-pointer transition-colors ${checked ? 'bg-white' : 'bg-gray-50/50'}`}
+      onClick={onToggle}
+    >
+      <div
+        className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+          checked ? 'bg-gray-900 border-gray-900' : 'border-gray-300'
+        }`}
+      >
+        {checked && (
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+            <path d="M1 4l2.5 2.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600">
+            BB15
+          </span>
+          <span className="text-xs text-gray-400">{extraWorkItem.bb15_quantity} x 15 minutter</span>
+        </div>
+        <p className={`text-sm font-medium ${checked ? 'text-gray-900' : 'text-gray-500'}`}>
+          {extraWorkItem.title}
+        </p>
+      </div>
+
+      <span className="text-sm font-medium text-gray-700 flex-shrink-0">
+        {formatPrice(extraWorkItem.total_price)}
       </span>
     </div>
   );
@@ -297,9 +361,9 @@ function ExpiredPage({ phone, email }: { phone: string; email: string }) {
       <div className="flex-1 flex items-center justify-center px-4">
         <div className="text-center max-w-xs">
           <p className="text-4xl mb-4">⏱</p>
-          <h1 className="text-lg font-bold text-gray-900 mb-2">Tilbuddet er udløbet</h1>
+          <h1 className="text-lg font-bold text-gray-900 mb-2">Tilbuddet er udloebet</h1>
           <p className="text-sm text-gray-500 mb-6">
-            Kontakt os, hvis du stadig ønsker at få udført arbejdet.
+            Kontakt os, hvis du stadig oensker at faa udfoert arbejdet.
           </p>
           <div className="space-y-2">
             {phone && (
@@ -338,7 +402,7 @@ function AlreadyRespondedPage({ status }: { status: string }) {
       <div className="text-center max-w-xs">
         <p className="text-4xl mb-4">✓</p>
         <h1 className="text-lg font-bold text-gray-900 mb-2">{label}</h1>
-        <p className="text-sm text-gray-500">Kontakt os, hvis du har spørgsmål.</p>
+        <p className="text-sm text-gray-500">Kontakt os, hvis du har spoergsmaal.</p>
       </div>
     </div>
   );

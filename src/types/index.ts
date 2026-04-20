@@ -47,9 +47,29 @@ export interface OfferTemplateSnapshot {
   marker: OfferMarker;
 }
 
+export interface OfferExtraWorkItemInput {
+  title: string;
+  bb15Quantity: number;
+}
+
+export interface OfferExtraWorkItemSnapshot {
+  title: string;
+  bb15_quantity: number;
+  product_code: string;
+  bikedesk_product_id: number | null;
+  unit_price: number;
+  total_price: number;
+}
+
 export interface OfferImageSnapshot {
   url: string;
   filename: string;
+}
+
+export interface OfferResponsePayload {
+  accepted_ids: number[];
+  rejected_ids: number[];
+  extra_work_item_accepted?: boolean;
 }
 
 export interface Offer {
@@ -69,9 +89,10 @@ export interface Offer {
   opened_at: string | null;
   responded_at: string | null;
   templates_snapshot: OfferTemplateSnapshot[];
+  extra_work_item_snapshot: OfferExtraWorkItemSnapshot | null;
   images_snapshot: OfferImageSnapshot[];
   total_amount: number | null;
-  response_payload: { accepted_ids: number[]; rejected_ids: number[] } | null;
+  response_payload: OfferResponsePayload | null;
   bikedesk_sms_batch_id: number | null;
   bikedesk_comment_reference: string | null;
   resend_of: string | null;
@@ -166,6 +187,30 @@ export interface BikedeskTicketTemplateMaterial {
   price: number;
   derivedprice?: number | null;
   amountpaid?: number;
+}
+
+export interface BikedeskProduct {
+  id: number;
+  title: string;
+  productno: string;
+  price: number;
+  pricewithoutvat?: number | null;
+  barcode?: string | null;
+  recommendedretailprice?: number | null;
+}
+
+export interface BikedeskTicketMaterial {
+  id: number;
+  taskid?: number;
+  ticketid?: number;
+  productid?: number | null;
+  productno?: string | null;
+  title?: string | null;
+  amount: number;
+  price?: number | null;
+  amountpaid?: number;
+  product?: Partial<BikedeskProduct> | null;
+  raw?: Record<string, unknown>;
 }
 
 export interface BikedeskUser {

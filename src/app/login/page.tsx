@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import Link from 'next/link';
 
 export default function MechanicLoginPage() {
   const [code, setCode] = useState('');
@@ -88,9 +89,9 @@ export default function MechanicLoginPage() {
         </form>
 
         <div className="mt-6 pt-5 border-t border-gray-100 text-center">
-          <a href="/admin/login" className="text-xs text-gray-400 hover:text-gray-600">
+          <Link href="/admin/login" className="text-xs text-gray-400 hover:text-gray-600">
             Admin login
-          </a>
+          </Link>
         </div>
       </div>
     </div>

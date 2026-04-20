@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { validateMechanicSession } from '@/lib/session';
-import { sendSms, createTicketComment, getTicket, updateTicketTags, findPlannerUser, getSmsLogBatch } from '@/lib/bikedesk';
+import { sendSms, createTicketComment, getTicket, updateTicketTags, findPlannerUser, getSmsLogBatch, findProductByCode } from '@/lib/bikedesk';
 import { getBikedeskApiUserId } from '@/lib/bikedesk-config';
 import { buildOfferSlug, resolvePublicAppUrl } from '@/lib/offer-link';
-import { buildOfferDetailsCommentText, buildOfferSmsText } from '@/lib/offer-sms';
-import type { OfferSettings, OfferTemplateSnapshot } from '@/types';
+import { buildOfferSmsText } from '@/lib/offer-sms';
+import type { OfferExtraWorkItemInput, OfferExtraWorkItemSnapshot, OfferSettings, OfferTemplateSnapshot } from '@/types';
 import { DEFAULT_OFFER_SETTINGS } from '@/types';
+
+const BB15_PRODUCT_CODE = 'BB15';
 
 interface SendOfferBody {
   workOrderId: string;
@@ -19,6 +21,30 @@ interface SendOfferBody {
   customerPhone: string;
   customerEmail: string;
   templates: OfferTemplateSnapshot[];
+  extraWorkItem?: OfferExtraWorkItemInput | null;
+}
+
+function parseExtraWorkItem(input: OfferExtraWorkItemInput | null | undefined): OfferExtraWorkItemInput | null {
+  if (!input) {
+    return null;
+  }
+
+  const title = input.title?.trim() ?? '';
+  const quantity = Number.parseInt(String(input.bb15Quantity ?? ''), 10);
+
+  const hasAnyValue = title.length > 0 || Number.isFinite(quantity);
+  if (!hasAnyValue) {
+    return null;
+  }
+
+  if (!title || !Number.isInteger(quantity) || quantity <= 0) {
+    throw new Error('Ekstralinjen kræver både titel og et positivt antal 15-minutters blokke');
+  }
+
+  return {
+    title,
+    bb15Quantity: quantity,
+  };
 }
 
 export async function POST(req: Request) {
@@ -38,6 +64,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: 'Ingen ydelser valgt' }, { status: 400 });
   }
 
+  let extraWorkItem: OfferExtraWorkItemInput | null = null;
+  try {
+    extraWorkItem = parseExtraWorkItem(body.extraWorkItem);
+  } catch (err) {
+    return NextResponse.json(
+      { success: false, error: err instanceof Error ? err.message : 'Ugyldig ekstralinje' },
+      { status: 400 }
+    );
+  }
+
   const supabase = await createServiceClient();
 
   // Load settings
@@ -51,7 +87,36 @@ export async function POST(req: Request) {
     ? { ...DEFAULT_OFFER_SETTINGS, ...(settingsRow.value as Partial<OfferSettings>) }
     : DEFAULT_OFFER_SETTINGS;
 
-  const totalAmount = body.templates.reduce((sum, t) => sum + (t.price ?? 0), 0);
+  let extraWorkSnapshot: OfferExtraWorkItemSnapshot | null = null;
+  if (extraWorkItem) {
+    const product = await findProductByCode(BB15_PRODUCT_CODE);
+    if (!product) {
+      return NextResponse.json(
+        { success: false, error: 'Kunne ikke slå BB15 op i BikeDesk' },
+        { status: 500 }
+      );
+    }
+
+    if (!Number.isFinite(product.price)) {
+      return NextResponse.json(
+        { success: false, error: 'BB15 har ingen gyldig pris i BikeDesk' },
+        { status: 500 }
+      );
+    }
+
+    extraWorkSnapshot = {
+      title: extraWorkItem.title,
+      bb15_quantity: extraWorkItem.bb15Quantity,
+      product_code: BB15_PRODUCT_CODE,
+      bikedesk_product_id: product.id,
+      unit_price: product.price,
+      total_price: product.price * extraWorkItem.bb15Quantity,
+    };
+  }
+
+  const totalAmount =
+    body.templates.reduce((sum, t) => sum + (t.price ?? 0), 0) +
+    (extraWorkSnapshot?.total_price ?? 0);
   const sentAt = new Date();
   const expiresAt = new Date(sentAt.getTime() + settings.expiry_hours * 60 * 60 * 1000);
   const appUrl = resolvePublicAppUrl();
@@ -95,6 +160,7 @@ export async function POST(req: Request) {
       status: 'sent',
       expires_at: expiresAt.toISOString(),
       templates_snapshot: body.templates,
+      extra_work_item_snapshot: extraWorkSnapshot,
       images_snapshot: [],
       total_amount: totalAmount,
     })

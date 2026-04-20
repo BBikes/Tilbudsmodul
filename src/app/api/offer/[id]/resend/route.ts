@@ -3,7 +3,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { createTicketComment, sendSms, findTicketByWorkOrderNumber, findPlannerUser, getSmsLogBatch } from '@/lib/bikedesk';
 import { getBikedeskApiUserId } from '@/lib/bikedesk-config';
 import { buildOfferSlug, resolvePublicAppUrl } from '@/lib/offer-link';
-import { buildOfferDetailsCommentText, buildOfferSmsText } from '@/lib/offer-sms';
+import { buildOfferSmsText } from '@/lib/offer-sms';
 import type { OfferSettings } from '@/types';
 import { DEFAULT_OFFER_SETTINGS } from '@/types';
 
@@ -80,6 +80,7 @@ export async function POST(
       status: 'sent',
       expires_at: expiresAt.toISOString(),
       templates_snapshot: original.templates_snapshot,
+      extra_work_item_snapshot: original.extra_work_item_snapshot,
       images_snapshot: original.images_snapshot,
       total_amount: original.total_amount,
       resend_of: original.id,

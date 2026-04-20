@@ -1,6 +1,6 @@
 import type { Offer } from '@/types';
 
-const DEFAULT_PUBLIC_APP_URL = 'https://tilbudsmodul-indol.vercel.app';
+const DEFAULT_PUBLIC_APP_URL = 'https://tilbud.b-bikes.dk';
 
 function normalizePublicAppUrl(value: string) {
   const trimmed = value.trim();
@@ -72,7 +72,15 @@ export function getOfferIdentifier(offer: Pick<Offer, 'public_slug' | 'token'>) 
 }
 
 export function buildOfferPath(identifier: string) {
-  return `/tilbud/${encodeURIComponent(identifier)}`;
+  return `/${encodeURIComponent(identifier)}`;
+}
+
+export function buildPublicOfferUrl(identifier: string, appUrl = resolveClientPublicAppUrl()) {
+  return `${appUrl.replace(/\/$/, '')}${buildOfferPath(identifier)}`;
+}
+
+function resolveClientPublicAppUrl() {
+  return normalizePublicAppUrl(process.env.NEXT_PUBLIC_APP_URL ?? '') ?? DEFAULT_PUBLIC_APP_URL;
 }
 
 export function resolvePublicAppUrl() {
