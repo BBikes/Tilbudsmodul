@@ -336,8 +336,14 @@ function ExtraWorkRow({
 
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex items-center gap-2">
-            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${badgeClasses}`}>
-            BB15
+          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${badgeClasses}`}>
+            {extraWorkItem.marker === 'red'
+              ? 'Nødvendig'
+              : extraWorkItem.marker === 'yellow'
+                ? 'Anbefales'
+                : extraWorkItem.marker === 'green'
+                  ? 'Inden næste service'
+                  : 'BB15'}
           </span>
           <span className="text-xs text-gray-400">{extraWorkItem.bb15_quantity} x 15 minutter</span>
         </div>
