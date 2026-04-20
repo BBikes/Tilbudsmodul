@@ -3,16 +3,13 @@ import { createServiceClient } from '@/lib/supabase/server';
 import {
   attachTemplateToTicket,
   createTicketComment,
-  createTicketMaterial,
+  createCustomTicketMaterial,
   findPlannerUser,
-  findProductByCode,
   findTicketByWorkOrderNumber,
   updateTicketTags,
 } from '@/lib/bikedesk';
 import type { OfferExtraWorkItemSnapshot, OfferSettings, OfferTemplateSnapshot } from '@/types';
 import { DEFAULT_OFFER_SETTINGS } from '@/types';
-
-const BB15_PRODUCT_CODE = 'BB15';
 
 function formatAcceptedLine(title: string, price: number) {
   return `${title}${price > 0 ? ` - ${price} kr.` : ''}`;
@@ -169,27 +166,14 @@ export async function POST(
 
       if (extraWorkItemAccepted && extraWorkItem) {
         try {
-          let productId = extraWorkItem.bikedesk_product_id;
-
-          if (!productId) {
-            const product = await findProductByCode(extraWorkItem.product_code || BB15_PRODUCT_CODE);
-            productId = product?.id ?? null;
-          }
-
-          if (!productId) {
-            throw new Error(`Could not resolve BikeDesk product ${extraWorkItem.product_code || BB15_PRODUCT_CODE}`);
-          }
-
-          await createTicketMaterial({
+          await createCustomTicketMaterial({
             ticketId: ticket.id,
-            productId,
-            productCode: extraWorkItem.product_code || BB15_PRODUCT_CODE,
             title: extraWorkItem.title,
             amount: extraWorkItem.bb15_quantity,
             price: extraWorkItem.unit_price,
           });
         } catch (err) {
-          console.error('[respond] upsert BB15 material failed', err);
+          console.error('[respond] create custom BB15 material failed', err);
         }
       }
 

@@ -372,6 +372,32 @@ export async function createTicketMaterial(input: UpsertTicketMaterialInput): Pr
   });
 }
 
+/**
+ * Creates a freetext/custom material line on a ticket WITHOUT linking a product.
+ * BikeDesk ignores the `title` field when `productid` is present and uses the
+ * product's own title instead. Omitting productid lets us set an arbitrary title.
+ */
+export async function createCustomTicketMaterial(opts: {
+  ticketId: number;
+  title: string;
+  amount: number;
+  price?: number | null;
+}): Promise<void> {
+  await bdFetch<unknown>('/tickets/materials', {
+    method: 'POST',
+    body: JSON.stringify({
+      content: {
+        taskid: opts.ticketId,
+        ticketid: opts.ticketId,
+        title: opts.title,
+        amount: opts.amount,
+        quantity: opts.amount,
+        ...(opts.price !== undefined && opts.price !== null ? { price: opts.price } : {}),
+      },
+    }),
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Templates
 // ---------------------------------------------------------------------------
