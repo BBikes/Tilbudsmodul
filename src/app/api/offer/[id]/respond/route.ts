@@ -4,7 +4,9 @@ import {
   attachTemplateToTicket,
   createTicketComment,
   createCustomTicketMaterial,
+  createTicketMaterial,
   findPlannerUser,
+  findProductByCode,
   findTicketByWorkOrderNumber,
   updateTicketTags,
 } from '@/lib/bikedesk';
@@ -166,14 +168,45 @@ export async function POST(
 
       if (extraWorkItemAccepted && extraWorkItem) {
         try {
+          // Line 1: fritekst title as a standalone line with no SKU
           await createCustomTicketMaterial({
             ticketId: ticket.id,
             title: extraWorkItem.title,
-            amount: extraWorkItem.bb15_quantity,
-            price: extraWorkItem.unit_price,
+            amount: 1,
+            price: null,
           });
         } catch (err) {
-          console.error('[respond] create custom BB15 material failed', err);
+          console.error('[respond] create fritekst material line failed', err);
+        }
+
+        try {
+          // Line 2: BB15 product line with the correct quantity
+          let bb15ProductId = extraWorkItem.bikedesk_product_id;
+          if (!bb15ProductId) {
+            const product = await findProductByCode(extraWorkItem.product_code || 'BB15');
+            bb15ProductId = product?.id ?? null;
+          }
+
+          if (bb15ProductId) {
+            await createTicketMaterial({
+              ticketId: ticket.id,
+              productId: bb15ProductId,
+              productCode: extraWorkItem.product_code || 'BB15',
+              title: extraWorkItem.product_code || 'BB15',
+              amount: extraWorkItem.bb15_quantity,
+              price: extraWorkItem.unit_price,
+            });
+          } else {
+            // Fallback: custom line if BB15 product lookup fails
+            await createCustomTicketMaterial({
+              ticketId: ticket.id,
+              title: `BB15 x ${extraWorkItem.bb15_quantity}`,
+              amount: extraWorkItem.bb15_quantity,
+              price: extraWorkItem.unit_price,
+            });
+          }
+        } catch (err) {
+          console.error('[respond] create BB15 material line failed', err);
         }
       }
 
