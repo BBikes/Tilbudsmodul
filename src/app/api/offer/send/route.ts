@@ -52,9 +52,15 @@ function parseExtraWorkItem(input: OfferExtraWorkItemInput | null | undefined): 
     throw new Error('Ekstralinjen kræver både titel og et positivt antal 15-minutters blokke');
   }
 
+  const validMarkers = ['red', 'yellow', 'green'] as const;
+  const marker = validMarkers.includes(input.marker as (typeof validMarkers)[number])
+    ? (input.marker as (typeof validMarkers)[number])
+    : 'yellow';
+
   return {
     title,
     bb15Quantity: quantity,
+    marker,
   };
 }
 
@@ -170,6 +176,7 @@ export async function POST(req: Request) {
       bikedesk_product_id: product.id,
       unit_price: product.price,
       total_price: product.price * extraWorkItem.bb15Quantity,
+      marker: extraWorkItem.marker,
     };
   }
 

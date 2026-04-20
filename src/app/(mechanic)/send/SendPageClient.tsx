@@ -14,6 +14,7 @@ import { TemplateList, buildTemplateSnapshots } from '@/components/offer/Templat
 import { CustomerPanel } from '@/components/offer/CustomerPanel';
 import { ImageSelector } from '@/components/offer/ImageSelector';
 import { SendPreview } from '@/components/offer/SendPreview';
+import { MarkerCircleButton, MARKER_OPTIONS } from '@/components/offer/MarkerBadge';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
@@ -39,6 +40,7 @@ export default function SendPageClient({
   const [selected, setSelected] = useState<Map<number, OfferMarker>>(new Map());
   const [extraWorkTitle, setExtraWorkTitle] = useState('');
   const [extraWorkBlocks, setExtraWorkBlocks] = useState(0);
+  const [extraWorkMarker, setExtraWorkMarker] = useState<OfferMarker>('yellow');
   const [showPreview, setShowPreview] = useState(false);
   const [sentOfferId, setSentOfferId] = useState<string | null>(null);
   const router = useRouter();
@@ -73,6 +75,7 @@ export default function SendPageClient({
       ? {
           title: normalizedExtraWorkTitle,
           bb15Quantity: extraWorkBlocks,
+          marker: extraWorkMarker,
         }
       : null;
   const extraWorkTotal =
@@ -247,6 +250,21 @@ export default function SendPageClient({
                   Udfyld både titel og et positivt antal 15-minutters blokke for at bruge ekstralinjen.
                 </p>
               )}
+
+              <div>
+                <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-500">Prioritet</span>
+                <div className="flex items-center gap-3">
+                  {MARKER_OPTIONS.map((opt) => (
+                    <MarkerCircleButton
+                      key={opt.value}
+                      marker={opt.value}
+                      active={extraWorkMarker === opt.value}
+                      onClick={() => setExtraWorkMarker(opt.value)}
+                      title={opt.label}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div>
@@ -273,18 +291,14 @@ export default function SendPageClient({
             <div className="space-y-2 rounded-xl border border-gray-100 bg-white p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Prioritet</p>
               <div className="space-y-1.5 text-xs text-gray-600">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-red-600">▲</span>
-                  <span>Nødvendig for funktion</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-yellow-500">▲</span>
-                  <span>Bør udbedres, ikke kritisk</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-green-600">●</span>
-                  <span>Inden næste service</span>
-                </div>
+                {MARKER_OPTIONS.map((opt) => (
+                  <div key={opt.value} className="flex items-center gap-2">
+                    <span className={`inline-block w-3.5 h-3.5 rounded-full flex-shrink-0 ${
+                      opt.value === 'red' ? 'bg-red-500' : opt.value === 'yellow' ? 'bg-amber-400' : 'bg-green-500'
+                    }`} />
+                    <span>{opt.label}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

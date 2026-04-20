@@ -102,9 +102,7 @@ export function SendPreview({
 
               {extraWorkItem && (
                 <div className="flex items-center gap-2 py-1.5">
-                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-gray-100 px-2 text-[11px] font-semibold text-gray-600">
-                    BB15
-                  </span>
+                  <MarkerBadge marker={extraWorkItem.marker} compact />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-gray-800">{extraWorkItem.title}</p>
                     <p className="text-xs text-gray-400">{extraWorkItem.bb15Quantity} x 15 minutter</p>

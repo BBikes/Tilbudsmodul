@@ -1,7 +1,7 @@
 'use client';
 
 import type { OfferTemplate, OfferMarker, OfferTemplateSnapshot } from '@/types';
-import { MARKER_OPTIONS } from './MarkerBadge';
+import { MARKER_OPTIONS, MarkerCircleButton } from './MarkerBadge';
 
 interface TemplateListProps {
   templates: OfferTemplate[];
@@ -83,21 +83,15 @@ export function TemplateList({ templates, selected, onToggle, onMarkerChange }: 
                   </span>
 
                   {isSelected && (
-                    <div className="flex items-center gap-1 flex-shrink-0">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       {MARKER_OPTIONS.map((opt) => (
-                        <button
+                        <MarkerCircleButton
                           key={opt.value}
-                          type="button"
-                          title={opt.label}
+                          marker={opt.value}
+                          active={marker === opt.value}
                           onClick={() => onMarkerChange(t.bikedesk_template_id, opt.value)}
-                          className={`w-7 h-7 rounded-lg flex items-center justify-center text-base transition-colors ${
-                            marker === opt.value
-                              ? `${opt.color} bg-white shadow-sm ring-1 ring-gray-200`
-                              : 'text-gray-300 hover:text-gray-400'
-                          }`}
-                        >
-                          <span className="text-xs">{opt.icon}</span>
-                        </button>
+                          title={opt.label}
+                        />
                       ))}
                     </div>
                   )}

@@ -50,6 +50,7 @@ export interface OfferTemplateSnapshot {
 export interface OfferExtraWorkItemInput {
   title: string;
   bb15Quantity: number;
+  marker: OfferMarker;
 }
 
 export interface OfferExtraWorkItemSnapshot {
@@ -59,6 +60,7 @@ export interface OfferExtraWorkItemSnapshot {
   bikedesk_product_id: number | null;
   unit_price: number;
   total_price: number;
+  marker?: OfferMarker;
 }
 
 export interface OfferImageSnapshot {

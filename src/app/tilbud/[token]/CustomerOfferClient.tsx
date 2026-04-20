@@ -51,7 +51,9 @@ function OfferView({ offer }: { offer: Offer }) {
 
   const extraWorkItem = offer.extra_work_item_snapshot;
   const [checkedIds, setCheckedIds] = useState<Set<number>>(defaultSelected);
-  const [extraWorkChecked, setExtraWorkChecked] = useState(!!extraWorkItem);
+  const extraWorkDefaultChecked =
+    !!extraWorkItem && extraWorkItem.marker !== 'green';
+  const [extraWorkChecked, setExtraWorkChecked] = useState(extraWorkDefaultChecked);
   const [loading, setLoading] = useState<'accept_selected' | 'accept_all' | 'reject' | null>(null);
   const [done, setDone] = useState(false);
   const [doneType, setDoneType] = useState<'accepted' | 'rejected' | null>(null);
@@ -307,6 +309,14 @@ function ExtraWorkRow({
   checked: boolean;
   onToggle: () => void;
 }) {
+  const badgeClasses =
+    extraWorkItem.marker === 'red'
+      ? 'bg-red-100 text-red-700'
+      : extraWorkItem.marker === 'yellow'
+        ? 'bg-amber-100 text-amber-700'
+        : extraWorkItem.marker === 'green'
+          ? 'bg-green-100 text-green-700'
+          : 'bg-gray-100 text-gray-600';
   return (
     <div
       className={`flex cursor-pointer items-center gap-3 px-5 py-4 transition-colors ${checked ? 'bg-white' : 'bg-gray-50/50'}`}
@@ -326,7 +336,7 @@ function ExtraWorkRow({
 
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex items-center gap-2">
-          <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600">
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${badgeClasses}`}>
             BB15
           </span>
           <span className="text-xs text-gray-400">{extraWorkItem.bb15_quantity} x 15 minutter</span>
