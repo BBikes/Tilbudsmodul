@@ -3,11 +3,11 @@ import { createServiceClient } from '@/lib/supabase/server';
 import {
   attachTemplateToTicket,
   createTicketComment,
+  createTicketMaterial,
   findPlannerUser,
   findProductByCode,
   findTicketByWorkOrderNumber,
   updateTicketTags,
-  upsertTicketMaterial,
 } from '@/lib/bikedesk';
 import type { OfferExtraWorkItemSnapshot, OfferSettings, OfferTemplateSnapshot } from '@/types';
 import { DEFAULT_OFFER_SETTINGS } from '@/types';
@@ -180,7 +180,7 @@ export async function POST(
             throw new Error(`Could not resolve BikeDesk product ${extraWorkItem.product_code || BB15_PRODUCT_CODE}`);
           }
 
-          await upsertTicketMaterial({
+          await createTicketMaterial({
             ticketId: ticket.id,
             productId,
             productCode: extraWorkItem.product_code || BB15_PRODUCT_CODE,

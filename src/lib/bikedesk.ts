@@ -365,6 +365,13 @@ export async function upsertTicketMaterial(input: UpsertTicketMaterialInput): Pr
   });
 }
 
+export async function createTicketMaterial(input: UpsertTicketMaterialInput): Promise<void> {
+  await bdFetch<unknown>('/tickets/materials', {
+    method: 'POST',
+    body: JSON.stringify(buildTicketMaterialPayload(input)),
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Templates
 // ---------------------------------------------------------------------------
