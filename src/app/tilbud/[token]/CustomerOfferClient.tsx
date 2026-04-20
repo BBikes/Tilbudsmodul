@@ -150,7 +150,7 @@ function OfferView({ offer }: { offer: Offer }) {
           </h2>
           <p className="text-sm text-gray-500">
             {doneType === 'accepted'
-              ? 'Vi er i gang med din cykel. Du hører fra os snarest.'
+              ? 'Vi er i gang med dit køretøj. Du hører fra os snarest.'
               : 'Vi har registreret dit svar. Kontakt os gerne, hvis du har spørgsmål.'}
           </p>
         </div>

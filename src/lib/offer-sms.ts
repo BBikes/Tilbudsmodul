@@ -4,7 +4,7 @@ import { buildPublicOfferUrl } from './offer-link';
 export const DEFAULT_SMS_TEMPLATE = [
   'Hej {customerName},',
   '',
-  'Vi har lavet et tilbud til dig på din cykel (sag {workOrderId}).',
+  'Vi har lavet et tilbud til dig på dit køretøj (sag {workOrderId}).',
   '',
   'Se og godkend tilbuddet her:',
   '{offerLink}',
