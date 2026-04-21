@@ -159,7 +159,7 @@ export interface BikedeskTicket {
   storeid?: number;
   assignee?: number;
   tagids: number[];
-  total: number;
+  totalPrice: number;
 }
 
 export interface BikedeskTicketTemplate {
