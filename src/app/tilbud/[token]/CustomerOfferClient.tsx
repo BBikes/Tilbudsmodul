@@ -218,16 +218,27 @@ function OfferView({ offer }: { offer: Offer }) {
           </button>
         )}
 
-        {selectedTotal > 0 && (
-          <div className="flex items-center justify-between rounded-xl border border-gray-100 bg-white px-5 py-3">
-            <span className="text-sm text-gray-600">Valgt total</span>
-            <span className="font-bold text-gray-900">{formatPrice(selectedTotal)}</span>
-          </div>
-        )}
       </main>
 
       <div className="fixed bottom-0 left-0 right-0 border-t border-gray-100 bg-white px-4 py-4">
         <div className="mx-auto max-w-lg space-y-2">
+          {offer.work_order_total != null ? (
+            <div className="space-y-1 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">Pris for tilvalgte opgaver</span>
+                <span className="text-sm font-medium text-gray-700">{formatPrice(selectedTotal)}</span>
+              </div>
+              <div className="flex items-center justify-between border-t border-gray-200 pt-2">
+                <span className="text-sm font-semibold text-gray-900">Samlet pris for opgaven</span>
+                <span className="text-base font-bold text-gray-900">{formatPrice(offer.work_order_total + selectedTotal)}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+              <span className="text-sm font-semibold text-gray-900">Samlet pris for opgaven</span>
+              <span className="text-base font-bold text-gray-900">{formatPrice(selectedTotal)}</span>
+            </div>
+          )}
           <div className="flex gap-2">
             <button
               onClick={() => respond('accept_selected')}

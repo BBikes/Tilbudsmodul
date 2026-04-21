@@ -229,6 +229,7 @@ export async function POST(req: Request) {
       extra_work_item_snapshot: extraWorkSnapshot,
       images_snapshot: [],
       total_amount: totalAmount,
+      work_order_total: typeof ticket.total === 'number' && Number.isFinite(ticket.total) ? ticket.total : null,
     })
     .select('id, public_slug')
     .single();

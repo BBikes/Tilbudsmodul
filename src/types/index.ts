@@ -94,6 +94,7 @@ export interface Offer {
   extra_work_item_snapshot: OfferExtraWorkItemSnapshot | null;
   images_snapshot: OfferImageSnapshot[];
   total_amount: number | null;
+  work_order_total: number | null;
   response_payload: OfferResponsePayload | null;
   bikedesk_sms_batch_id: number | null;
   bikedesk_comment_reference: string | null;
