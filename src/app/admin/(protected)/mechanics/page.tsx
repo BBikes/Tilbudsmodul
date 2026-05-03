@@ -5,7 +5,7 @@ import MechanicsClient from '@/app/(admin)/mechanics/MechanicsClient';
 export default async function MechanicsPage() {
   const supabase = await createServiceClient();
   const { data: mechanics } = await supabase
-    .from('mechanics')
+    .from('offer_mechanics')
     .select('id, name, bikedesk_user_id, active, created_at, updated_at')
     .order('name');
 

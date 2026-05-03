@@ -12,7 +12,7 @@ export async function POST(req: Request) {
 
     const supabase = await createServiceClient();
     const { data: mechanics } = await supabase
-      .from('mechanics')
+      .from('offer_mechanics')
       .select('id, name, code_hash, active')
       .eq('active', true);
 

@@ -45,7 +45,7 @@ export async function validateMechanicSession(): Promise<Mechanic | null> {
   if (new Date(session.expires_at) < new Date()) return null;
 
   const { data: mechanic } = await supabase
-    .from('mechanics')
+    .from('offer_mechanics')
     .select('*')
     .eq('id', session.mechanic_id)
     .eq('active', true)

@@ -31,14 +31,14 @@ export async function POST(req: Request) {
   const code_hash = await bcrypt.hash(code, 10);
   const supabase = await createServiceClient();
 
-  await supabase.from('mechanics').insert({
+  await supabase.from('offer_mechanics').insert({
     name,
     code_hash,
     bikedesk_user_id: bikedesk_user_id ?? null,
     active: true,
   });
 
-  const { data: mechanics } = await supabase.from('mechanics').select('id, name, bikedesk_user_id, active, created_at, updated_at').order('name');
+  const { data: mechanics } = await supabase.from('offer_mechanics').select('id, name, bikedesk_user_id, active, created_at, updated_at').order('name');
   return NextResponse.json({ success: true, mechanics: mechanics ?? [] });
 }
 
@@ -64,7 +64,7 @@ export async function PUT(req: Request) {
     patch.code_hash = await bcrypt.hash(code, 10);
   }
 
-  await supabase.from('mechanics').update(patch).eq('id', id);
-  const { data: mechanics } = await supabase.from('mechanics').select('id, name, bikedesk_user_id, active, created_at, updated_at').order('name');
+  await supabase.from('offer_mechanics').update(patch).eq('id', id);
+  const { data: mechanics } = await supabase.from('offer_mechanics').select('id, name, bikedesk_user_id, active, created_at, updated_at').order('name');
   return NextResponse.json({ success: true, mechanics: mechanics ?? [] });
 }
